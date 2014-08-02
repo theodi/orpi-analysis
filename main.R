@@ -26,10 +26,10 @@ download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format
 all_arrivals <- download_data()
 length(unique(all_arrivals$body.train_id))
 
-# how many were delayed at the final destination? note that there may be more
+# what % were delayed at the final destination? note that there may be more
 # than one final destination arrival records for the same train id!
 delayed_at_final_destination <- all_arrivals[(all_arrivals$body.planned_event_type == "DESTINATION") & (all_arrivals$body.variation_status == "LATE"), ]
-length(unique(delayed_at_final_destination$body.train_id))
+length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_arrivals$body.train_id))
 
 # what was the average delay in minutes of trains that were delayed at their 
 # final destination? (will ignore that there are duplicates)
