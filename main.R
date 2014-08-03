@@ -3,15 +3,18 @@
 #   must be configured with your AWS credentials before being called from this
 #   script
 
-AWS_BUCKET_NAME <- "open_rail_performance_index"
+AWS_BUCKET_NAME <- "orpi-nrod-store"
 
 # download_data creates a data.frame from all arrival log files from the 
 # specified date; if no date is specified, the date of yesterday is used.
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
-download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format((Sys.Date() - 1), "%m"), day = format(Sys.Date(), "%d")) {
-    available_files <- grep(paste0("^s3://", AWS_BUCKET_NAME, "/arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0")), read.table(pipe(paste0("/usr/local/bin/s3cmd ls s3://", AWS_BUCKET_NAME, "/")), header = F, sep=" ", colClasses = "character")[, c(8)], value = TRUE)  
+download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format((Sys.Date() - 1), "%m"), day = format(Sys.Date() - 1, "%d")) {
+    grep_string <- paste0("^s3://", AWS_BUCKET_NAME, "/arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0"))
+    s3cmd_command <- paste0("/usr/local/bin/s3cmd ls s3://", AWS_BUCKET_NAME, "/")
+    available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")  
+    available_files <- grep(grep_string, available_files[, ncol(available_files)], value = TRUE) 
     results <- data.frame();
     sapply(available_files, function (filename) {
         print(paste0("Reading ", filename, "..."));
