@@ -11,8 +11,9 @@ AWS_BUCKET_NAME <- "orpi-nrod-store"
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
 download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format((Sys.Date() - 1), "%m"), day = format(Sys.Date() - 1, "%d")) {
-    grep_string <- paste0("^s3://", AWS_BUCKET_NAME, "/arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0"))
-    s3cmd_command <- paste0("/usr/local/bin/s3cmd ls s3://", AWS_BUCKET_NAME, "/")
+    path <- paste0("s3://", AWS_BUCKET_NAME, "/", year, "/", month, "/", day, "/")
+    grep_string <- paste0("^", path , "arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0"))
+    s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
     available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")  
     available_files <- grep(grep_string, available_files[, ncol(available_files)], value = TRUE) 
     results <- data.frame();
@@ -26,13 +27,13 @@ download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format
 # examples
 
 # how many train services we recorded yesterday?
-all_arrivals <- download_data()
-length(unique(all_arrivals$body.train_id))
+all_arrivals_yesterday <- download_data()
+length(unique(all_arrivals_yesterday$body.train_id))
 
 # what % were delayed at the final destination? note that there may be more
 # than one final destination arrival records for the same train id!
-delayed_at_final_destination <- all_arrivals[(all_arrivals$body.planned_event_type == "DESTINATION") & (all_arrivals$body.variation_status == "LATE"), ]
-length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_arrivals$body.train_id))
+delayed_at_final_destination <- all_arrivals_yesterday[(all_arrivals_yesterday$body.planned_event_type == "DESTINATION") & (all_arrivals_yesterday$body.variation_status == "LATE"), ]
+length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_arrivals_yesterday$body.train_id))
 
 # what was the average delay in minutes of trains that were delayed at their 
 # final destination? (will ignore that there are duplicates)
