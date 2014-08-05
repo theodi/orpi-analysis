@@ -28,5 +28,10 @@ all_arrivals_yesterday <- tbl_dt(readRDS('data/data-2014-08-04.RData'))
 dim(all_arrivals_yesterday)
 str(all_arrivals_yesterday)
 
-# TODO - drop some empty columns
-sapply(all_arrivals_yesterday, no.missing)
+# TODO: drop some (almost) empty columns
+sapply(all_arrivals_yesterday, count.missing)
+sapply(all_arrivals_yesterday, pct.missing)
+sapply(all_arrivals_yesterday, count.empty)
+sapply(all_arrivals_yesterday, pct.empty)
+sapply(all_arrivals_yesterday, count.unique)
+sapply(all_arrivals_yesterday, pct.unique)

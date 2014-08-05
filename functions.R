@@ -17,9 +17,11 @@ capwords <- function(s, strict = FALSE) {
 
 '%ni%' <- Negate('%in%')
 
-no.missing <- function(x) sum(is.na(x))
+count.missing <- function(x) sum(is.na(x))
+pct.missing <- function(x) as.numeric(formatC(sum(is.na(x)) * 100 / length(x), format = "fg", digits = 3))
 
 count.empty  <- function(x){sum(x == "", na.rm = TRUE)}
+pct.empty <- function(x) as.numeric(formatC(sum(x == "", na.rm = TRUE) * 100 / length(x), format = "fg", digits = 3))
 
 count.unique <- function(x) length(unique(x))
 pct.unique <- function(x) as.numeric(formatC(length(unique(x)) * 100 / length(x), format = "fg", digits = 3))
