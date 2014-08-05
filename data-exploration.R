@@ -24,15 +24,9 @@ source('functions.r')
 # Stored data locally
 # I'm using DPLYR and DATATABLE
 all_arrivals_yesterday <- tbl_dt(readRDS('data/data-2014-08-04.RData'))
-length(unique(all_arrivals_yesterday$body.train_id))
 
-# what % were delayed at the final destination? note that there may be more
-# than one final destination arrival records for the same train id!
-delayed_at_final_destination <- all_arrivals_yesterday[(all_arrivals_yesterday$body.planned_event_type == "DESTINATION") & (all_arrivals_yesterday$body.variation_status == "LATE"), ]
-length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_arrivals_yesterday$body.train_id))
+dim(all_arrivals_yesterday)
+str(all_arrivals_yesterday)
 
-# what was the average delay in minutes of trains that were delayed at their 
-# final destination? (will ignore that there are duplicates)
-mean(delayed_at_final_destination$body.timetable_variation)
-
-
+# TODO - drop some empty columns
+sapply(all_arrivals_yesterday, no.missing)
