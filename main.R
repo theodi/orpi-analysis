@@ -39,6 +39,18 @@ length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_a
 # final destination? (will ignore that there are duplicates)
 mean(delayed_at_final_destination$body.timetable_variation)
 
+#------------------------------------------------
+test <- row.sample(all_arrivals_yesterday, 1000)
+
+# Milliseconds too precise for conversion
+test$body.actual_timestamp <- as.POSIXct((test$body.actual_timestamp + 0.1)/1000, origin = '1970-01-01')
+
+test$body.auto_expected <- as.logical(test$body.auto_expected)
+test$body.correction_ind <- as.logical(test$body.correction_ind)
+
+# CHECK: train ID is not useful
+table(all_arrivals_yesterday$body.current_train_id)
 
 
+str(test)
 

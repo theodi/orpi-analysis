@@ -16,6 +16,7 @@ sapply(packages, require, character.only = TRUE)
 theme_set(theme_minimal(base_family = "Helvetica Neue"))
 options(stringsAsFactors = FALSE)
 # options("scipen"=100, "digits"=4) # no scientific notation
+# options(digits.secs = 0)
 
 # Functions
 source('functions.r')
