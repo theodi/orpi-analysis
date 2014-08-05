@@ -3,14 +3,14 @@
 setwd('~/git/orpi-analysis')
 
 # List of packages for session
-packages <- c('dplyr', 'ggplot2')
+packages <- c('dplyr', 'ggplot2', 'Hmisc', 'data.table')
 
 # Install CRAN packages (if not already installed)
 .inst <- packages %in% installed.packages()
 if(length(packages[!.inst]) > 0) install.packages(packages[!.inst])
 
 # Load packages into session 
-sapply(packages, require, character.only=TRUE)
+sapply(packages, require, character.only = TRUE)
 
 # Options
 theme_set(theme_minimal(base_family = "Helvetica Neue"))
@@ -20,7 +20,9 @@ options(stringsAsFactors = FALSE)
 source('functions.r')
 
 #------------------------------------------------
-all_arrivals_yesterday <- readRDS('data/data-2014-08-04.RData')
+# Stored data locally
+# I'm using DPLYR and DATATABLE
+all_arrivals_yesterday <- tbl_dt(readRDS('data/data-2014-08-04.RData'))
 length(unique(all_arrivals_yesterday$body.train_id))
 
 # what % were delayed at the final destination? note that there may be more
