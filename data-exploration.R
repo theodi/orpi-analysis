@@ -3,7 +3,7 @@
 setwd('~/git/orpi-analysis')
 
 # List of packages for session
-packages <- c('dplyr', 'ggplot2', 'Hmisc', 'data.table')
+packages <- c('dplyr', 'ggplot2', 'Hmisc')
 
 # Install CRAN packages (if not already installed)
 .inst <- packages %in% installed.packages()
@@ -25,20 +25,24 @@ source('clean-rail-data.R')
 # Stored data locally
 all_arrivals_yesterday <- readRDS('data/data-2014-08-04.RData')
 
-#------------------------------------------------
 # Clean with script
 all_arrivals_yesterday <- raildata.clean(all_arrivals_yesterday)
 
 # I'm using DPLYR
 all_arrivals_yesterday <- tbl_df(all_arrivals_yesterday)
 
+#------------------------------------------------
 dim(all_arrivals_yesterday)
 str(all_arrivals_yesterday)
 
 # TODO: drop some (almost) empty columns
-sapply(all_arrivals_yesterday, count.missing)
-sapply(all_arrivals_yesterday, pct.missing)
-sapply(all_arrivals_yesterday, count.empty)
-sapply(all_arrivals_yesterday, pct.empty)
-sapply(all_arrivals_yesterday, count.unique)
-sapply(all_arrivals_yesterday, pct.unique)
+as.matrix(sapply(all_arrivals_yesterday, count.missing))
+as.matrix(sapply(all_arrivals_yesterday, pct.missing))
+#sapply(all_arrivals_yesterday, count.empty)
+#sapply(all_arrivals_yesterday, pct.empty)
+as.matrix(sapply(all_arrivals_yesterday, count.unique))
+as.matrix(sapply(all_arrivals_yesterday, pct.unique)
+
+#------------------------------------------------
+          
+          
