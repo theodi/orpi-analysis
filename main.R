@@ -39,6 +39,3 @@ length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_a
 # final destination? (will ignore that there are duplicates)
 mean(delayed_at_final_destination$body.timetable_variation)
 
-
-
-
