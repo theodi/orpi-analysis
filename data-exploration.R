@@ -50,8 +50,10 @@ describe(all$body.variation_status)
 describe(all[all$body.variation_status %in% 'EARLY', 'body.timetable_variation'])
 describe(all[all$body.variation_status %in% 'LATE', 'body.timetable_variation'])
 
-# This looks reasonable: two categories disappear; table perhaps more useful
+# This looks reasonable: two categories have only zeros; table perhaps more useful
 ggplot(data = all[all$body.timetable_variation > 0, ]) + geom_boxplot(aes(x = body.variation_status, y = body.timetable_variation)) + coord_flip()
+table(all[all$body.timetable_variation <= 10, 'body.timetable_variation'], all[all$body.timetable_variation <= 10, 'body.variation_status'])
+
 
 #------------------------------------------------
 delayed_final_dest <- test[(test$body.planned_event_type == "DESTINATION") & (test$body.variation_status == "LATE"), ]
