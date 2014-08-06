@@ -27,23 +27,18 @@ raildata.clean <- function(x){
   
   x[, 'body.gbtt_timestamp'] <- convert.unix(x[, 'body.gbtt_timestamp'])
   
-  # TODO - this should happen for all variable before factor conversion?
   x[x[, 'body.line_ind'] %in% "", 'body.line_ind'] <- NA
   x[, 'body.line_ind'] <- droplevels(x[, 'body.line_ind'])
   
   x[, 'body.offroute_ind'] <- as.logical(x[, 'body.offroute_ind'])
-  
-  # TODO
-  # body.original_loc_stanox
-  # body.original_loc_timestamp
+
+  x[, 'body.original_loc_timestamp'] <- convert.unix(x[, 'body.original_loc_timestamp'])
   
   x[, 'body.planned_timestamp'] <- convert.unix(x[, 'body.planned_timestamp'])
   
-  # TODO - this should happen for all variable before factor conversion?
   x[, 'body.platform'] <- as.character(x[, 'body.platform'])
   x[x[, 'body.platform'] %in% "", 'body.platform'] <- NA
   
-  # TODO - this should happen for all variable before factor conversion?
   x[, 'body.route'] <- as.character(x[, 'body.route'])
   x[x[, 'body.route'] %in% "", 'body.route'] <- NA
   
