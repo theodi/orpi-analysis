@@ -15,16 +15,22 @@ sapply(packages, require, character.only = TRUE)
 # Options
 theme_set(theme_minimal(base_family = "Helvetica Neue"))
 options(stringsAsFactors = FALSE)
-# options("scipen"=100, "digits"=4) # no scientific notation
+options("scipen" = 100, "digits" = 4) # no scientific notation
 # options(digits.secs = 0)
 
 # Functions
 source('functions.r')
-
+source('clean-rail-data.R')
 #------------------------------------------------
 # Stored data locally
-# I'm using DPLYR and DATATABLE
-all_arrivals_yesterday <- tbl_dt(readRDS('data/data-2014-08-04.RData'))
+all_arrivals_yesterday <- readRDS('data/data-2014-08-04.RData')
+
+#------------------------------------------------
+# Clean with script
+all_arrivals_yesterday <- raildata.clean(all_arrivals_yesterday)
+
+# I'm using DPLYR
+all_arrivals_yesterday <- tbl_df(all_arrivals_yesterday)
 
 dim(all_arrivals_yesterday)
 str(all_arrivals_yesterday)
