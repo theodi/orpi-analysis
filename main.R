@@ -30,7 +30,10 @@ download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format
 # how many train services we recorded yesterday?
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 # all_arrivals_yesterday <- download_data()
+=======
+>>>>>>> FETCH_HEAD
 =======
 >>>>>>> FETCH_HEAD
 =======
