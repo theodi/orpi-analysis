@@ -29,7 +29,7 @@ all <- readRDS('data/data-2014-08-04.RData')
 # Clean with script
 all <- raildata.clean(all)
 
-# I'm using DPLYR
+# I'm using DPLYR << apparently not
 all <- tbl_df(all)
 
 #------------------------------------------------
