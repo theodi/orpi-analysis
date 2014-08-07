@@ -28,17 +28,11 @@ download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format
 # examples
 
 # how many train services we recorded yesterday?
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-# all_arrivals_yesterday <- download_data()
-=======
->>>>>>> FETCH_HEAD
-=======
->>>>>>> FETCH_HEAD
-=======
->>>>>>> FETCH_HEAD
-all_arrivals_yesterday <- download_data(2014, 8, 4)
+all_arrivals_yesterday <- download_data()
+length(unique(all_arrivals_yesterday$body.train_id))
+
+# how many train services we recorded on 4 August 2014?
+all_arrivals_4_august_2014 <- download_data(2014, 8, 4)
 length(unique(all_arrivals_yesterday$body.train_id))
 
 # what % were delayed at the final destination? note that there may be more
