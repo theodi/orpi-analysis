@@ -26,6 +26,16 @@ pct.empty <- function(x) as.numeric(formatC(sum(as.character(x) == "", na.rm = T
 count.unique <- function(x) length(unique(x))
 pct.unique <- function(x) as.numeric(formatC(length(unique(x)) * 100 / length(x), format = "fg", digits = 3))
 
+# Format percentage
+format.pct <- function(x, digits = 1, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+
+# Format minutes
+format.min <- function(x, digits = 1, format = "f", ...) {
+  paste0(formatC(x, format = format, digits = digits, ...), " min")
+}
+
 # Show missing data in table as default
 table = function (..., useNA = 'ifany') base::table(..., useNA = useNA)
 

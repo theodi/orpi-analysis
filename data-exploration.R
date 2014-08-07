@@ -59,8 +59,11 @@ ggplot(data = all, aes(x = hour(body.actual_timestamp))) + geom_bar(binwidth = 1
   scale_x_continuous(breaks = seq(0, 24, 2))
 
 #------------------------------------------------
-delayed_final_dest <- test[(test$body.planned_event_type == "DESTINATION") & (test$body.variation_status == "LATE"), ]
-delayed <- test[test$body.variation_status %in% "LATE", ]
+delayed_final_dest <- all[(all$body.planned_event_type == "DESTINATION") & (all$body.variation_status == "LATE"), ]
+delayed <- all[all$body.variation_status %in% "LATE", ]
+
+
+
 
 #------------------------------------------------
 test <- row.sample(all, 10000)
@@ -74,5 +77,29 @@ ggplot(data = test) + geom_point(aes(x = time_diff, y = body.timetable_variation
 # Correlations
 cor(test[test$body.variation_status %in% 'LATE', c('time_diff', 'body.timetable_variation')], use = "complete.obs")
 cor(test[test$body.variation_status %in% 'EARLY', c('time_diff', 'body.timetable_variation')], use = "complete.obs")
+
+table(test[, 'time_diff'] - test[, 'body.timetable_variation'])
+dotplot(table(test[, 'time_diff'] - test[, 'body.timetable_variation']), horizontal = F)
+
+#------------------------------------------------
+#--------------- Potential metrics --------------
+
+## Percent delayed
+pct_delayed <- nrow(all[all$body.variation_status %in% "LATE", ]) / nrow(all) # Make sure there are no empty rows etc.
+format.pct(pct_delayed)
+
+## Average minutes
+mean_delayed <- mean(delayed[, 'body.timetable_variation'])
+median_delayed <- median(delayed[, 'body.timetable_variation'])
+format.min(mean_delayed)
+format.min(median_delayed)
+
+## Average minutes for > 1 min delay
+mean_delayed_more1 <- mean(delayed[delayed[, 'body.timetable_variation'] > 1, 'body.timetable_variation'])
+# mean(filter(delayed, body.timetable_variation > 1)$body.timetable_variation)
+median_delayed_more1 <- median(delayed[delayed[, 'body.timetable_variation'] > 1, 'body.timetable_variation'])
+format.min(mean_delayed_more1)
+format.min(median_delayed_more1)
+
 
 
