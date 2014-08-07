@@ -2,6 +2,7 @@
 # It converts UNIX times to POSIx
 # Changes empty strings to NAs
 # Changes variable classes eg to logical
+# TODO - not factors anymore, but some would make sense.
 
 raildata.clean <- function(x){
   # Convery UNIX times into R formats
@@ -23,12 +24,12 @@ raildata.clean <- function(x){
   
   # TODO - this should happen for all variable before factor conversion?
   x[x[, 'body.direction_ind'] %in% "", 'body.direction_ind'] <- NA
-  x[, 'body.direction_ind'] <- droplevels(x[, 'body.direction_ind'])
+  if (is.factor(x[, 'body.direction_ind'] ==TRUE)) x[, 'body.direction_ind'] <- droplevels(x[, 'body.direction_ind'])
   
   x[, 'body.gbtt_timestamp'] <- convert.unix(x[, 'body.gbtt_timestamp'])
   
   x[x[, 'body.line_ind'] %in% "", 'body.line_ind'] <- NA
-  x[, 'body.line_ind'] <- droplevels(x[, 'body.line_ind'])
+  if (is.factor(x[, 'body.line_ind'] ==TRUE)) x[, 'body.line_ind'] <- droplevels(x[, 'body.line_ind'])
   
   x[, 'body.offroute_ind'] <- as.logical(x[, 'body.offroute_ind'])
 
