@@ -69,7 +69,7 @@ test <- row.sample(all, 10000)
 test[, 'time_diff'] <- as.numeric(test[, 'body.actual_timestamp'] - test[, 'body.gbtt_timestamp'])/60
 
 ggplot(data = test) + geom_point(aes(x = time_diff, y = body.timetable_variation), shape = 1) + 
-  facet_wrap(~ body.variation_status) + ylim(0, 50)
+  facet_wrap(~ body.variation_status, nrow = 1) + ylim(0, 50) + xlim(-50, 50)
 
 # Correlations
 cor(test[test$body.variation_status %in% 'LATE', c('time_diff', 'body.timetable_variation')], use = "complete.obs")
