@@ -82,6 +82,29 @@ table(test[, 'time_diff'] - test[, 'body.timetable_variation'])
 dotplot(table(test[, 'time_diff'] - test[, 'body.timetable_variation']), horizontal = F)
 
 #------------------------------------------------
+#--------------- Passenger trains ---------------
+# https://groups.google.com/forum/#!topic/openraildata-talk/A-3pV_5ZfNc
+# Anyway, passenger operators operate both trains that are in service and those 
+# that are empty. On a very simplified level, if you just want a best effort 
+# using just the realtime feed you can look at class 1, 2 and 9 services. This 
+# will be the third character in the train_id field.
+# 
+# Together with the toc_id field not being 00, this should give you all the 
+# passenger trains. It will also include a couple of other services such as 
+# staff only services. To discount these, you would probably need to look at 
+# the timetable feed and the "category" field on each service when the train 
+# activation (0001 message type) comes through and map via the schedule UID.
+
+# Is toc_id enough? Don't think so:
+table(all$body.toc_id, is.na(all$body.gbtt_timestamp))
+
+# Indicator for third 
+test$class1_2_9 <- ifelse(grepl("^..[129]", test[, 'body.train_id']) , TRUE, FALSE)
+# This is somehow tricky with NAs, but none here.
+sum(test[, 'class1_2_9'], na.rm = T)
+
+
+#------------------------------------------------
 #--------------- Potential metrics --------------
 
 ## Percent delayed
