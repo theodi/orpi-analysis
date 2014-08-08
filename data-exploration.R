@@ -107,16 +107,20 @@ sum(test[, 'class1_2_9'], na.rm = T)
 test$passenger  <- ifelse(test[, 'class1_2_9'] == TRUE & test[, 'body.toc_id'] != 0, TRUE, FALSE)
 
 # DPLYR test
-test %>%
+test_vis <- test %>%
   filter(passenger == TRUE) %>%
+  filter(body.timetable_variation > 1) %>% 
+  filter(body.variation_status == "LATE") %>%
   mutate(hour_timetable = hour(body.actual_timestamp)) %>%
   group_by(hour_timetable) %>%
   summarise(
     mean_delayed_pass = mean(body.timetable_variation, na.rm = TRUE),
     median_delayed_pass = median(body.timetable_variation, na.rm = TRUE),
-    no_trains = length(body.timetable_variation)
+    no_trains = n() # equiv to length(var)
     )
 
+ggplot(data = test_vis, aes(x = factor(hour_timetable), y = mean_delayed_pass)) + 
+  geom_bar(color = 'white', fill = odi_purple, stat = 'identity') + coord_polar(start = -0.12) # why offset?
 
 #------------------------------------------------
 #--------------- Potential metrics --------------
