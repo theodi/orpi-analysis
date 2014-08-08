@@ -101,5 +101,13 @@ median_delayed_more1 <- median(delayed[delayed[, 'body.timetable_variation'] > 1
 format.min(mean_delayed_more1)
 format.min(median_delayed_more1)
 
+## Percent of trains delayed for more than 10 min
+pct_delayed_more10 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 10, ]) / nrow(all) # Make sure there are no empty rows etc.
+format.pct(pct_delayed_more10)
+
+## Percent of trains delayed for more than 30 min
+pct_delayed_more30 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 30, ]) / nrow(all) # Make sure there are no empty rows etc.
+format.pct(pct_delayed_more30)
+
 
 
