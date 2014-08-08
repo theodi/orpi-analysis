@@ -84,7 +84,7 @@ dotplot(table(test[, 'time_diff'] - test[, 'body.timetable_variation']), horizon
 #------------------------------------------------
 #--------------- Passenger trains ---------------
 # https://groups.google.com/forum/#!topic/openraildata-talk/A-3pV_5ZfNc
-# Anyway, passenger operators operate both trains that are in service and those 
+# Passenger operators operate both trains that are in service and those 
 # that are empty. On a very simplified level, if you just want a best effort 
 # using just the realtime feed you can look at class 1, 2 and 9 services. This 
 # will be the third character in the train_id field.
@@ -98,10 +98,24 @@ dotplot(table(test[, 'time_diff'] - test[, 'body.timetable_variation']), horizon
 # Is toc_id enough? Don't think so:
 table(all$body.toc_id, is.na(all$body.gbtt_timestamp))
 
-# Indicator for third 
+# Indicator for third character being 1, 2 or 9.
 test$class1_2_9 <- ifelse(grepl("^..[129]", test[, 'body.train_id']) , TRUE, FALSE)
 # This is somehow tricky with NAs, but none here.
 sum(test[, 'class1_2_9'], na.rm = T)
+
+# Here the additional condition excludes around 0.1%
+test$passenger  <- ifelse(test[, 'class1_2_9'] == TRUE & test[, 'body.toc_id'] != 0, TRUE, FALSE)
+
+# DPLYR test
+test %>%
+  filter(passenger == TRUE) %>%
+  mutate(hour_timetable = hour(body.actual_timestamp)) %>%
+  group_by(hour_timetable) %>%
+  summarise(
+    mean_delayed_pass = mean(body.timetable_variation, na.rm = TRUE),
+    median_delayed_pass = median(body.timetable_variation, na.rm = TRUE),
+    no_trains = length(body.timetable_variation)
+    )
 
 
 #------------------------------------------------
@@ -131,6 +145,8 @@ format.pct(pct_delayed_more10)
 ## Percent of trains delayed for more than 30 min
 pct_delayed_more30 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 30, ]) / nrow(all) # Make sure there are no empty rows etc.
 format.pct(pct_delayed_more30)
+
+
 
 
 
