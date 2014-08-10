@@ -7,7 +7,7 @@
 raildata.clean <- function(x){
   # Convery UNIX times into R formats
   # Milliseconds too precise for conversion
-  convert.unix <- function(x) as.POSIXct((x + 0.1)/1000, origin = '1970-01-01')
+  convert.unix <- function(x) as.POSIXct((x + 0.1)/1000, origin = '1970-01-01', tz="GMT")
   
   x[, 'body.actual_timestamp'] <- convert.unix(x[, 'body.actual_timestamp'])
   
