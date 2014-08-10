@@ -5,6 +5,9 @@
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
 
+# let's see integer numerics as such!
+options(digits=12)
+
 # download_data creates a data.frame from all arrival log files from the 
 # specified date; if no date is specified, the date of yesterday is used.
 # Note that a series of "MD5 signatures do not match" warnings will be 
