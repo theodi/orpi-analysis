@@ -13,7 +13,7 @@ options(digits=12)
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
-download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format((Sys.Date() - 1), "%m"), day = format(Sys.Date() - 1, "%d")) {
+download_data_LEGACY <- function (year = format((Sys.Date() - 1), "%Y"), month = format((Sys.Date() - 1), "%m"), day = format(Sys.Date() - 1, "%d")) {
     path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(year, width=4, flag="0"), "/", formatC(month, width=2, flag="0"), "/", formatC(day, width=2, flag="0"), "/")
     grep_string <- paste0("^", path , "arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0"))
     s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
@@ -27,6 +27,55 @@ download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format
     return(results)
 }
 
+download_data <- function (target_date = (Sys.Date() - 1)) {
+
+    # returns the list of all available files that could include events
+    # that took place in the specified target date
+    get_files_list <- function (target_date) {
+        path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), "/")
+        grep_string <- paste0("^", path , "arrivals_", formatC(format(target_date, "%Y"), width=4, flag="0"), formatC(format(target_date, "%m"), width=2, flag="0"), formatC(format(target_date, "%d"), width=2, flag="0"))
+        s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
+        available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")  
+        available_files <- grep(grep_string, available_files[, ncol(available_files)], value = TRUE)         
+        sort(available_files)
+    }
+    
+    # create the list of files that I need to read
+    target_date <- as.Date(target_date)
+    tomorrow <- as.Date(target_date + 1)
+    files_list <- c(get_files_list(target_date), get_files_list(tomorrow)[1])
+
+    # read them
+    results <- data.frame();
+    sapply(files_list, function (filename) {
+        print(paste0("Reading ", filename, "..."));
+        results <<- rbind(results, read.csv(pipe(paste0("/usr/local/bin/s3cmd get ", filename, " -")), header = TRUE, stringsAsFactors = FALSE))
+    });
+
+    # convert timestamps to POSIXct
+    timestamp_column_names <- grep("_timestamp$", names(results), value = TRUE)    
+    sapply(timestamp_column_names, function (timestamp_column_name) {
+        # make empty values into NAs
+        results[, timestamp_column_name] <<- ifelse(results[, timestamp_column_name] == "", NA, results[, timestamp_column_name])  
+        # makes non-NA values to POSIXct
+        results[, timestamp_column_name] <<- as.POSIXct(results[, timestamp_column_name])
+    })
+    
+    # drop rows that have NA for body.planned_timestamp
+    results <- results[!is.na(results$body.planned_timestamp), ]
+    
+    # copy body.planned_timestamp to body.gbtt_timestamp where the latter is undefined
+    results$body.gbtt_timestamp <- ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp) 
+    
+    # filter out the wrong dates
+    min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
+    max_possible_date_not_included <- as.POSIXct(paste0(formatC(format(tomorrow, "%Y"), width=4, flag="0"), "/", formatC(format(tomorrow, "%m"), width=2, flag="0"), "/", formatC(format(tomorrow, "%d"), width=2, flag="0"), " 00:00"))
+    results <- results[(results$body.actual_timestamp >= rep(min_possible_date, nrow(results))) & (results$body.actual_timestamp < rep(max_possible_date_not_included, nrow(results))), ]
+    
+    return(results)
+}
+
+
 # examples
 
 # how many train services we recorded yesterday?
@@ -34,7 +83,7 @@ all_arrivals_yesterday <- download_data()
 length(unique(all_arrivals_yesterday$body.train_id))
 
 # how many train services we recorded on 4 August 2014?
-all_arrivals_4_august_2014 <- download_data(2014, 8, 4)
+all_arrivals_4_august_2014 <- download_data(as.Date("2014/08/04"))
 length(unique(all_arrivals_yesterday$body.train_id))
 
 # what % were delayed at the final destination? note that there may be more
