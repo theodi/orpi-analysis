@@ -17,7 +17,6 @@ download_data <- function (year = format((Sys.Date() - 1), "%Y"), month = format
     path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(year, width=4, flag="0"), "/", formatC(month, width=2, flag="0"), "/", formatC(day, width=2, flag="0"), "/")
     grep_string <- paste0("^", path , "arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0"))
     s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
-    print(s3cmd_command)
     available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")  
     available_files <- grep(grep_string, available_files[, ncol(available_files)], value = TRUE) 
     results <- data.frame();
