@@ -33,6 +33,12 @@ all <- raildata.clean(all)
 all <- tbl_df(all)
 
 #------------------------------------------------
+# Remember to filter on:
+# - Arrivals
+# - Passenger trains
+# - LATE status
+# - and potentially delays > 1 or >= 3 minutes
+#------------------------------------------------
 dim(all)
 str(all)
 
@@ -66,7 +72,7 @@ delayed <- all[all$body.variation_status %in% "LATE", ]
 
 
 #------------------------------------------------
-test <- row.sample(all, 10000)
+test <- row.sample(all, 543744)
 
 # Problem is body.gbtt_timestamp with 30-40% missing
 test[, 'time_diff'] <- as.numeric(test[, 'body.actual_timestamp'] - test[, 'body.gbtt_timestamp'])/60
@@ -111,6 +117,7 @@ test_vis <- test %>%
   filter(passenger == TRUE) %>%
   filter(body.timetable_variation > 1) %>% 
   filter(body.variation_status == "LATE") %>%
+  filter(body.planned_event_type == 'ARRIVAL') %>%
   mutate(hour_timetable = hour(body.actual_timestamp)) %>%
   group_by(hour_timetable) %>%
   summarise(
