@@ -29,16 +29,11 @@ all <- readRDS('data/data-2014-08-04.RData')
 # Clean with script
 all <- raildata.clean(all)
 
-# I'm using DPLYR << apparently not
+# I'm using DPLYR
 all <- tbl_df(all)
 
 #------------------------------------------------
-# Remember to filter on:
-# - Arrivals
-# - Passenger trains
-# - LATE status
-# - and potentially delays > 1 or >= 3 minutes
-#------------------------------------------------
+
 dim(all)
 str(all)
 
@@ -65,14 +60,27 @@ ggplot(data = all, aes(x = hour(body.actual_timestamp))) + geom_bar(binwidth = 1
   scale_x_continuous(breaks = seq(0, 24, 2))
 
 #------------------------------------------------
-delayed_final_dest <- all[(all$body.planned_event_type == "DESTINATION") & (all$body.variation_status == "LATE"), ]
-delayed <- all[all$body.variation_status %in% "LATE", ]
+# Remember to filter on:
+# - Arrivals
+# - Passenger trains
+# - LATE status
+# - and potentially delays > 1 or >= 3 minutes
+#------------------------------------------------
+# Indicator for third character being 1, 2 or 9.
+all$class1_2_9 <- ifelse(grepl("^..[129]", all[, 'body.train_id']) , TRUE, FALSE)
 
+# Here the additional condition excludes around 0.1%
+all$passenger  <- ifelse(all[, 'class1_2_9'] == TRUE & all[, 'body.toc_id'] != 0, TRUE, FALSE)
 
+# Using DPLYR 
+delayed <- all %>%
+  filter(passenger == TRUE) %>%
+  filter(body.variation_status == "LATE") %>%
+  filter(body.planned_event_type == 'ARRIVAL')
 
 
 #------------------------------------------------
-test <- row.sample(all, 543744)
+test <- row.sample(all, 10000)
 
 # Problem is body.gbtt_timestamp with 30-40% missing
 test[, 'time_diff'] <- as.numeric(test[, 'body.actual_timestamp'] - test[, 'body.gbtt_timestamp'])/60
@@ -115,7 +123,7 @@ test$passenger  <- ifelse(test[, 'class1_2_9'] == TRUE & test[, 'body.toc_id'] !
 # DPLYR test
 test_vis <- test %>%
   filter(passenger == TRUE) %>%
-  filter(body.timetable_variation > 1) %>% 
+  filter(body.timetable_variation >= 3) %>% 
   filter(body.variation_status == "LATE") %>%
   filter(body.planned_event_type == 'ARRIVAL') %>%
   mutate(hour_timetable = hour(body.actual_timestamp)) %>%
@@ -126,14 +134,13 @@ test_vis <- test %>%
     no_trains = n() # equiv to length(var)
     )
 
-ggplot(data = test_vis, aes(x = factor(hour_timetable), y = mean_delayed_pass)) + 
-  geom_bar(color = 'white', fill = odi_purple, stat = 'identity') + coord_polar(start = -0.12) # why offset?
+ggplot(data = test_vis, aes(x = factor(hour_timetable), y = mean_delayed_pass, group = 1)) + ylim(0, NA) + 
+  geom_point(color = odi_purple, stat = 'identity') + geom_line(color = odi_purple) + coord_polar(start = -0.12) # why offset?
 
 #------------------------------------------------
 #--------------- Potential metrics --------------
-
 ## Percent delayed
-pct_delayed <- nrow(all[all$body.variation_status %in% "LATE", ]) / nrow(all) # Make sure there are no empty rows etc.
+pct_delayed <- nrow(delayed) / nrow(all[all$passenger == TRUE & all$body.planned_event_type == 'ARRIVAL', ]) # Make sure there are no empty rows etc.
 format.pct(pct_delayed)
 
 ## Average minutes
@@ -157,11 +164,11 @@ format.min(mean_delayed_more3)
 format.min(median_delayed_more3)
 
 ## Percent of trains delayed for more than 10 min
-pct_delayed_more10 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 10, ]) / nrow(all) # Make sure there are no empty rows etc.
+pct_delayed_more10 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 10, ]) / nrow(all[all$passenger == TRUE & all$body.planned_event_type == 'ARRIVAL', ]) # Make sure there are no empty rows etc.
 format.pct(pct_delayed_more10)
 
 ## Percent of trains delayed for more than 30 min
-pct_delayed_more30 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 30, ]) / nrow(all) # Make sure there are no empty rows etc.
+pct_delayed_more30 <- nrow(delayed[delayed[, 'body.timetable_variation'] > 30, ]) / nrow(all[all$passenger == TRUE & all$body.planned_event_type == 'ARRIVAL', ]) # Make sure there are no empty rows etc.
 format.pct(pct_delayed_more30)
 
 
