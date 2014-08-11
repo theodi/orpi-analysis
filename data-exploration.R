@@ -134,7 +134,7 @@ test_vis <- test %>%
     no_trains = n() # equiv to length(var)
     )
 
-ggplot(data = test_vis, aes(x = factor(hour_timetable), y = mean_delayed_pass, group = 1)) + ylim(0, NA) + 
+ggplot(data = test_vis, aes(x = hour_timetable, y = mean_delayed_pass, group = 1)) + ylim(0, NA) + scale_x_continuous(breaks=0:23) +
   geom_point(color = odi_purple, stat = 'identity') + geom_line(color = odi_purple) + coord_polar(start = -0.12) # why offset?
 
 #------------------------------------------------
