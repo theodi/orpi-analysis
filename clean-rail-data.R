@@ -5,12 +5,7 @@
 # TODO - not factors anymore, but some would make sense.
 
 raildata.clean <- function(x){
-  # Convery UNIX times into R formats
-  # Milliseconds too precise for conversion
-  convert.unix <- function(x) as.POSIXct((x + 0.1)/1000, origin = '1970-01-01', tz="GMT")
-  
-  x[, 'body.actual_timestamp'] <- convert.unix(x[, 'body.actual_timestamp'])
-  
+    
   x[, 'body.auto_expected'] <- as.logical(x[, 'body.auto_expected'])
   
   x[, 'body.correction_ind'] <- as.logical(x[, 'body.correction_ind'])
@@ -26,17 +21,11 @@ raildata.clean <- function(x){
   x[x[, 'body.direction_ind'] %in% "", 'body.direction_ind'] <- NA
   if (is.factor(x[, 'body.direction_ind'] ==TRUE)) x[, 'body.direction_ind'] <- droplevels(x[, 'body.direction_ind'])
   
-  x[, 'body.gbtt_timestamp'] <- convert.unix(x[, 'body.gbtt_timestamp'])
-  
   x[x[, 'body.line_ind'] %in% "", 'body.line_ind'] <- NA
   if (is.factor(x[, 'body.line_ind'] ==TRUE)) x[, 'body.line_ind'] <- droplevels(x[, 'body.line_ind'])
   
   x[, 'body.offroute_ind'] <- as.logical(x[, 'body.offroute_ind'])
 
-  x[, 'body.original_loc_timestamp'] <- convert.unix(x[, 'body.original_loc_timestamp'])
-  
-  x[, 'body.planned_timestamp'] <- convert.unix(x[, 'body.planned_timestamp'])
-  
   x[, 'body.platform'] <- as.character(x[, 'body.platform'])
   x[x[, 'body.platform'] %in% "", 'body.platform'] <- NA
   
@@ -50,8 +39,6 @@ raildata.clean <- function(x){
   x[, 'body.train_id'] <- as.character(x[, 'body.train_id'])
   
   x[, 'body.train_terminated'] <- as.logical(x[, 'body.train_terminated'])
-  
-  x[, 'header.msg_queue_timestamp'] <- convert.unix(x[, 'header.msg_queue_timestamp'])
   
   x[, 'header.source_dev_id'] <- as.character(x[, 'header.source_dev_id'])
   x[x[, 'header.source_dev_id'] %in% "", 'header.source_dev_id'] <- NA
