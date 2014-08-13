@@ -55,12 +55,26 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
     # back to an epoch-style timestamp
     results$body.gbtt_timestamp <- as.POSIXct(ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp), origin = '1970-01-01')
 
+    # the value of body.current_train_id can be either of "", NA or "null" to
+    # represent that the train has not changed id
+    results$body.current_train_id <- ifelse(results$body.current_train_id %in% c("", "null"), NA, results$body.current_train_id)
+    
     # filter out the wrong dates
     min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
     max_possible_date_not_included <- as.POSIXct(paste0(formatC(format(tomorrow, "%Y"), width=4, flag="0"), "/", formatC(format(tomorrow, "%m"), width=2, flag="0"), "/", formatC(format(tomorrow, "%d"), width=2, flag="0"), " 00:00"))
     results <- results[(results$body.actual_timestamp >= rep(min_possible_date, nrow(results))) & (results$body.actual_timestamp < rep(max_possible_date_not_included, nrow(results))), ]
     
     return(results)
+}
+
+prepare_for_map <- function (day_data) {
+    # drop the trains that changed id
+    
+    # drop the columns I do not need
+    day_data <- day_data[, !(names(day_data) %in% c("body.auto_expected", "body.correction_ind", ))]
+    # 
+    train_ids <- unique(day_data$body.train_id)
+    
 }
 
 
