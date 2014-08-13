@@ -3,6 +3,7 @@
 #   must be configured with your AWS credentials before being called from this
 #   script
 
+library(plyr)
 AWS_BUCKET_NAME <- "orpi-nrod-store"
 
 # let's see integer numerics as such!
@@ -68,13 +69,30 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
 }
 
 prepare_for_map <- function (day_data) {
-    # drop the trains that changed id
-    
+    # drop the trains that changed id (e.g. there were none on 13/8/2014)
+    changed_id_trains <- unique(day_data[is.na(day_data$body.current_train_id),]$body.train_id)
+    day_data <- day_data[!(day_data$body.train_id %in% changed_id_trains), ]
+    # identify trains that changed *any* of their planned locations (e.g. 
+    # stations they stop at) and drop their entire journeys (e.g. there were 7 
+    # out of 473162 on 13/8/2014)
+    changed_location_trains <- unique(day_data[!is.na(day_data$body.original_loc_stanox), ]$body.train_id)
+    day_data <- day_data[!(day_data$body.train_id %in% changed_location_trains), ]
     # drop the columns I do not need
-    day_data <- day_data[, !(names(day_data) %in% c("body.auto_expected", "body.correction_ind", ))]
-    # 
-    train_ids <- unique(day_data$body.train_id)
-    
+    day_data <- day_data[, names(day_data) %in% c("body.train_id", 
+       "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
+       "body.gbtt_timestamp", "body.timetable_variation")]
+    # for each train, drop departure information but from the origin station
+    day_data_departures <- day_data[day_data$body.event_type == "DEPARTURE", ]
+    day_data_departures <- day_data_departures[with(day_data_departures, order(body.train_id, body.gbtt_timestamp)), ]
+    day_data_departures <- ddply(day_data_departures, .(body.train_id), function(x) head(x, 1))
+    # merge back with the arrivals
+    day_data <- rbind(
+        day_data_departures,
+        day_data[day_data$body.event_type == "ARRIVAL", ]
+    )
+    # sort by train and expected timestamp for the events
+    day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), ]    
+    return(day_data)
 }
 
 
