@@ -13,20 +13,6 @@ options(digits=12)
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
-download_data_LEGACY <- function (year = format((Sys.Date() - 1), "%Y"), month = format((Sys.Date() - 1), "%m"), day = format(Sys.Date() - 1, "%d")) {
-    path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(year, width=4, flag="0"), "/", formatC(month, width=2, flag="0"), "/", formatC(day, width=2, flag="0"), "/")
-    grep_string <- paste0("^", path , "arrivals_", year, formatC(month, width=2, flag="0"), formatC(day, width=2, flag="0"))
-    s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
-    available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")  
-    available_files <- grep(grep_string, available_files[, ncol(available_files)], value = TRUE) 
-    results <- data.frame();
-    sapply(available_files, function (filename) {
-        print(paste0("Reading ", filename, "..."));
-        results <<- rbind(results, read.csv(pipe(paste0("/usr/local/bin/s3cmd get ", filename, " -")), header = TRUE))
-    });
-    return(results)
-}
-
 download_data <- function (target_date = (Sys.Date() - 1)) {
 
     # returns the list of all available files that could include events
@@ -58,15 +44,17 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
         # make empty values into NAs
         results[, timestamp_column_name] <<- ifelse(results[, timestamp_column_name] == "", NA, results[, timestamp_column_name])  
         # makes non-NA values to POSIXct
-        results[, timestamp_column_name] <<- as.POSIXct(results[, timestamp_column_name])
+        results[, timestamp_column_name] <<- as.POSIXct(results[, timestamp_column_name], origin = '1970-01-01')
     })
     
     # drop rows that have NA for body.planned_timestamp
     results <- results[!is.na(results$body.planned_timestamp), ]
     
-    # copy body.planned_timestamp to body.gbtt_timestamp where the latter is undefined
-    results$body.gbtt_timestamp <- ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp) 
-    
+    # copy body.planned_timestamp to body.gbtt_timestamp where the latter is 
+    # undefined; note that if I don't specify as.POSIXct the date is converted
+    # back to an epoch-style timestamp
+    results$body.gbtt_timestamp <- as.POSIXct(ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp), origin = '1970-01-01')
+
     # filter out the wrong dates
     min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
     max_possible_date_not_included <- as.POSIXct(paste0(formatC(format(tomorrow, "%Y"), width=4, flag="0"), "/", formatC(format(tomorrow, "%m"), width=2, flag="0"), "/", formatC(format(tomorrow, "%d"), width=2, flag="0"), " 00:00"))
