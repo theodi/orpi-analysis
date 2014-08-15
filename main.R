@@ -84,7 +84,7 @@ download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
 
 prepare_for_map <- function (day_data) {
     # drop the trains that changed id (e.g. there were none on 13/8/2014)
-    changed_id_trains <- unique(day_data[is.na(day_data$body.current_train_id),]$body.train_id)
+    changed_id_trains <- unique(day_data[!is.na(day_data$body.current_train_id),]$body.train_id)
     day_data <- day_data[!(day_data$body.train_id %in% changed_id_trains), ]
     # identify trains that changed *any* of their planned locations (e.g. 
     # stations they stop at) and drop their entire journeys (e.g. there were 7 
