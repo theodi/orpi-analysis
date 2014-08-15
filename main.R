@@ -18,12 +18,11 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
 
     # returns the list of all available files that could include events
     # that took place in the specified target date
-    get_files_list <- function (target_date) {
+    get_files_list <- function (target_date, hourStart = 0, hourEnd = 23) {
         path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), "/")
-        grep_string <- paste0("^", path , "arrivals_", formatC(format(target_date, "%Y"), width=4, flag="0"), formatC(format(target_date, "%m"), width=2, flag="0"), formatC(format(target_date, "%d"), width=2, flag="0"))
         s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
-        available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")  
-        available_files <- grep(grep_string, available_files[, ncol(available_files)], value = TRUE)         
+        available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")
+        available_files <- available_files[, ncol(available_files)]  
         sort(available_files)
     }
     
