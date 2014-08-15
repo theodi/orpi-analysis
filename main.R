@@ -3,7 +3,6 @@
 #   must be configured with your AWS credentials before being called from this
 #   script
 
-library(plyr)
 AWS_BUCKET_NAME <- "orpi-nrod-store"
 
 # let's see integer numerics as such!
@@ -81,20 +80,10 @@ prepare_for_map <- function (day_data) {
     day_data <- day_data[, names(day_data) %in% c("body.train_id", 
        "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
        "body.gbtt_timestamp", "body.timetable_variation")]
-    # for each train, drop departure information but from the origin station
-    day_data_departures <- day_data[day_data$body.event_type == "DEPARTURE", ]
-    day_data_departures <- day_data_departures[with(day_data_departures, order(body.train_id, body.gbtt_timestamp)), ]
-    day_data_departures <- ddply(day_data_departures, .(body.train_id), function(x) head(x, 1))
-    # merge back with the arrivals
-    day_data <- rbind(
-        day_data_departures,
-        day_data[day_data$body.event_type == "ARRIVAL", ]
-    )
     # sort by train and expected timestamp for the events
     day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), ]    
     return(day_data)
 }
-
 
 # examples
 
