@@ -9,15 +9,14 @@ AWS_BUCKET_NAME <- "orpi-nrod-store"
 options(digits=12)
 
 # download_data creates a data.frame of all events for train journeys that 
-# run on the specified date, including the events for those same trains up to ~3 
-# hours in the previous day and ~EXTRA_HOURS hours in the following.
+# run on the specified date, including the events for those same trains up to
+# ~EXTRA_HOURS hours in the previous day and ~EXTRA_HOURS hours in the 
+# following day.
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
-download_data <- function (target_date = (Sys.Date() - 1)) {
+download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
 
-    EXTRA_HOURS = 3
-    
     # Returns the list of all available files that could include events
     # that took place in the specified target date and within the specified
     # hours; hourEnd is *included* in the results
