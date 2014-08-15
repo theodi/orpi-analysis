@@ -10,19 +10,27 @@ options(digits=12)
 
 # download_data creates a data.frame of all events for train journeys that 
 # run on the specified date, including the events for those same trains up to ~3 
-# hours in the previous day and ~3 hours in the following.
+# hours in the previous day and ~EXTRA_HOURS hours in the following.
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
 download_data <- function (target_date = (Sys.Date() - 1)) {
 
-    # returns the list of all available files that could include events
-    # that took place in the specified target date
+    EXTRA_HOURS = 3
+    
+    # Returns the list of all available files that could include events
+    # that took place in the specified target date and within the specified
+    # hours; hourEnd is *included* in the results
     get_files_list <- function (target_date, hourStart = 0, hourEnd = 23) {
+        # gets the files list from S3
         path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), "/")
         s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
         available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")
         available_files <- available_files[, ncol(available_files)]  
+        # if specified, filters out the hours outside of the specified interval
+        grep_regexpr <- paste0("^", path, "arrivals_", formatC(format(target_date, "%Y"), width=4, flag="0"), formatC(format(target_date, "%m"), width=2, flag="0"), formatC(format(target_date, "%d"), width=2, flag="0"), "(", paste(formatC(seq(hourStart, hourEnd), width=2, flag="0"), collapse="|"), ")")
+        available_files <- grep(grep_regexpr, available_files, value = TRUE)        
+        # returns the list in chronological order        
         sort(available_files)
     }
     
@@ -31,9 +39,9 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
     yesterday <- as.Date(target_date - 1)
     tomorrow <- as.Date(target_date + 1) 
     files_list <- c(
-        tail(get_files_list(yesterday), 3), 
+        get_files_list(yesterday, 23 - (EXTRA_HOURS - 1), 23), 
         get_files_list(target_date), 
-        head(get_files_list(tomorrow), 3)
+        get_files_list(tomorrow, 0, EXTRA_HOURS - 1)
     )
     
     # read them
