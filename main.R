@@ -8,13 +8,16 @@ AWS_BUCKET_NAME <- "orpi-nrod-store"
 # let's see integer numerics as such!
 options(digits=12)
 
-# download_data creates a data.frame from all arrival log files from the 
-# specified date; if no date is specified, the date of yesterday is used.
+# download_data creates a data.frame of all events for train journeys that 
+# run on the specified date, including the events for those same trains up to ~3 
+# hours in the previous day and ~3 hours in the following.
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads 
 download_data <- function (target_date = (Sys.Date() - 1)) {
 
+    if (class(target_date) == "character") target_date <- as.POSIXct(target_date)
+    
     # returns the list of all available files that could include events
     # that took place in the specified target date
     get_files_list <- function (target_date) {
@@ -28,8 +31,13 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
     
     # create the list of files that I need to read
     target_date <- as.Date(target_date)
-    tomorrow <- as.Date(target_date + 1)
-    files_list <- c(get_files_list(target_date), get_files_list(tomorrow)[1])
+    yesterday <- as.Date(target_date - 1)
+    tomorrow <- as.Date(target_date + 1) 
+    files_list <- c(
+        tail(get_files_list(yesterday), 3), 
+        get_files_list(target_date), 
+        head(get_files_list(tomorrow), 3)
+    )
 
     # read them
     results <- data.frame();
@@ -59,10 +67,13 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
     # represent that the train has not changed id
     results$body.current_train_id <- ifelse(results$body.current_train_id %in% c("", "null"), NA, results$body.current_train_id)
     
-    # filter out the wrong dates
+    # identify all train ids for events that happened in the target day
     min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
     max_possible_date_not_included <- as.POSIXct(paste0(formatC(format(tomorrow, "%Y"), width=4, flag="0"), "/", formatC(format(tomorrow, "%m"), width=2, flag="0"), "/", formatC(format(tomorrow, "%d"), width=2, flag="0"), " 00:00"))
-    results <- results[(results$body.actual_timestamp >= rep(min_possible_date, nrow(results))) & (results$body.actual_timestamp < rep(max_possible_date_not_included, nrow(results))), ]
+    train_ids_in_scope <- results[(results$body.actual_timestamp >= rep(min_possible_date, nrow(results))) & (results$body.actual_timestamp < rep(max_possible_date_not_included, nrow(results))), ]$body.train_id
+    
+    # filter out the trains that don't belong to the list above
+    results <- results[results$body.train_id %in% train_ids_in_scope, ]
     
     return(results)
 }
