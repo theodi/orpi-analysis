@@ -16,8 +16,6 @@ options(digits=12)
 # the MD5 of multipart uploads 
 download_data <- function (target_date = (Sys.Date() - 1)) {
 
-    if (class(target_date) == "character") target_date <- as.POSIXct(target_date)
-    
     # returns the list of all available files that could include events
     # that took place in the specified target date
     get_files_list <- function (target_date) {
@@ -38,7 +36,7 @@ download_data <- function (target_date = (Sys.Date() - 1)) {
         get_files_list(target_date), 
         head(get_files_list(tomorrow), 3)
     )
-
+    
     # read them
     results <- data.frame();
     sapply(files_list, function (filename) {
