@@ -131,29 +131,41 @@ fill_in_missing_arrivals <- function (clean_day_data) {
     return(clean_day_data)
 }
 
-average_delay_at_station <- function (clean_day_data, stanox) {
-    station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
-    # find the list of trains that I can only see departing
-    trains_that_depart_only <- unique(station_data_only$body.train_id[!(station_data_only$body.train_id %in% unique(station_data_only[station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
-    trains_that_depart_only <- station_data_only[station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
-    if (nrow(trains_that_depart_only) > 0) {
-        # find the earliest recorded event in the train life
-        earliest_events <- clean_day_data %.% 
-            filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
-            group_by(body.train_id) %.% 
-            summarise(earliest_event = min(body.gbtt_timestamp))
-        # if the event is earlier than the departure at this station, it must have
-        # arrived at this station, too!
-        trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events)
-        trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
-        # add the arrival records
-        dummy_arrivals <- station_data_only[(station_data_only$body.train_id %in% trains_that_must_have_arrived) & (station_data_only$body.event_type == 'DEPARTURE'), ]
-        dummy_arrivals$body.event_type <- 'ARRIVAL'
-        station_data_only <<- rbind(station_data_only, dummy_arrivals)        
+# If the 'stanox' parameter is specified, it calculates the average delay for
+# all trains arriving to or departing from that station as recorded in 
+# 'clean_day_data'. Otherwise, it returns a data.frame with all average delays 
+# for each stanox listed in 'clean_day_data'.
+average_delay_at_station <- function (clean_day_data, stanox = NULL) {
+    if (is.null(stanox)) {
+        stations <- sort(unique(clean_day_data$body.loc_stanox))
+        return(data.frame(stanox = stations, average_delay = sapply(stations, function (stanox) {
+            return(average_delay_at_station(clean_day_data, stanox))
+        })))
+    } else {
+        station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
+        # find the list of trains that I can only see departing
+        trains_that_depart_only <- unique(station_data_only$body.train_id[!(station_data_only$body.train_id %in% unique(station_data_only[station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
+        trains_that_depart_only <- station_data_only[station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
+        if (nrow(trains_that_depart_only) > 0) {
+            # find the earliest recorded event in the train life
+            earliest_events <- clean_day_data %.% 
+                filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
+                group_by(body.train_id) %.% 
+                summarise(earliest_event = min(body.gbtt_timestamp))
+            # if the earliest event is earlier than the departure at this station, 
+            # the train must have arrived at this station, too!
+            trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events, by = "body.train_id")
+            trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
+            if (length(trains_that_must_have_arrived) > 0) {
+                # add dummy arrival records
+                dummy_arrivals <- station_data_only[(station_data_only$body.train_id %in% trains_that_must_have_arrived) & (station_data_only$body.event_type == 'DEPARTURE'), ]
+                dummy_arrivals$body.event_type <- 'ARRIVAL'
+                station_data_only <<- rbind(station_data_only, dummy_arrivals)                    
+            }
+        }
+        return(mean(station_data_only$body.timetable_variation))
     }
-    return(mean(station_data_only$body.timetable_variation))
 }
-
 
 # examples
 
