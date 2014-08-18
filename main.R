@@ -138,9 +138,7 @@ fill_in_missing_arrivals <- function (clean_day_data) {
 average_delay_at_station <- function (clean_day_data, stanox = NULL) {
     if (is.null(stanox)) {
         stations <- sort(unique(clean_day_data$body.loc_stanox))
-        return(data.frame(stanox = stations, average_delay = sapply(stations, function (stanox) {
-            return(average_delay_at_station(clean_day_data, stanox))
-        })))
+        return(do.call(rbind, lapply(stations, function (stanox) average_delay_at_station(clean_day_data, stanox))))
     } else {
         station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
         # find the list of trains that I can only see departing
@@ -163,7 +161,11 @@ average_delay_at_station <- function (clean_day_data, stanox = NULL) {
                 station_data_only <<- rbind(station_data_only, dummy_arrivals)                    
             }
         }
-        return(mean(station_data_only$body.timetable_variation))
+        return(data.frame(
+            stanox = c(stanox),
+            average_delay = c(mean(station_data_only$body.timetable_variation)),
+            perc_delay_ge_30_minutes = c(nrow(station_data_only[station_data_only$body.timetable_variation >= 30, ]) / nrow(station_data_only))
+        ))
     }
 }
 
