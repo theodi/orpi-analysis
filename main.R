@@ -131,8 +131,8 @@ fill_in_missing_arrivals <- function (clean_day_data) {
     return(clean_day_data)
 }
 
-# If the 'stanox' parameter is specified, it calculates the average delay for
-# all trains arriving to or departing from that station as recorded in 
+# If the 'stanox' parameter is specified, this function calculates the average
+# delay for all trains arriving to or departing from that station as recorded in 
 # 'clean_day_data'. Otherwise, it returns a data.frame with all average delays 
 # for each stanox listed in 'clean_day_data'.
 average_delay_at_station <- function (clean_day_data, stanox = NULL) {
