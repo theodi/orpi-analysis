@@ -115,10 +115,12 @@ fill_in_missing_arrivals <- function (clean_day_data) {
         stations_without_arrival <- intermediate_stations_data[intermediate_stations_data$body.event_type == 'DEPARTURE', ]$body.loc_stanox
         stations_without_arrival <- stations_without_arrival[!(stations_without_arrival %in% intermediate_stations_data[intermediate_stations_data$body.event_type == 'ARRIVAL', ]$body.loc_stanox)]
         # create dummy arrival data by duplicating the departure data
-        dummy_arrival_data <- intermediate_stations_data[(intermediate_stations_data$body.loc_stanox %in% stations_without_arrival) & (intermediate_stations_data$body.event_type == 'DEPARTURE'), ]
-        dummy_arrival_data$body.event_type <- 'ARRIVAL'
-        # add the dummy data to the original dataset 
-        clean_day_data <<- rbind(clean_day_data, dummy_arrival_data)        
+        if (length(stations_without_arrival) > 0) {
+            dummy_arrival_data <- intermediate_stations_data[(intermediate_stations_data$body.loc_stanox %in% stations_without_arrival) & (intermediate_stations_data$body.event_type == 'DEPARTURE'), ]
+            dummy_arrival_data$body.event_type <- 'ARRIVAL'
+            # add the dummy data to the original dataset 
+            clean_day_data <<- rbind(clean_day_data, dummy_arrival_data)        
+        }
     })    
     clean_day_data <- clean_day_data[with(clean_day_data, order(body.train_id, body.gbtt_timestamp, body.event_type)), ]    
     return(clean_day_data)
