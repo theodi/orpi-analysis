@@ -3,6 +3,8 @@
 #   must be configured with your AWS credentials before being called from this
 #   script
 
+library(dplyr)
+
 AWS_BUCKET_NAME <- "orpi-nrod-store"
 
 # let's see integer numerics as such!
@@ -100,17 +102,20 @@ drop_dirty_trains <- function (day_data) {
     return(day_data)
 }
 
+# WE MAY DECIDE TO DROP THIS FUNCTION
 # this function should be applied only to data that was pre-processed using
 # drop_dirty_trains above
 fill_in_missing_arrivals <- function (clean_day_data) {
     train_ids <- unique(clean_day_data$body.train_id)
-    sapply(train_ids, function (train_id) {
+    total_no_of_trains <- length(train_ids)
+    current_train <- 0
+    for (train_id in train_ids) {
+        current_train <- current_train + 1
+        print(paste0("train_id ", train_id, ", ", current_train, "/", total_no_of_trains))
         # for the train being examined...
         intermediate_stations_data <- clean_day_data[clean_day_data$body.train_id == train_id, ]
-        # drop the departure at origin
-        intermediate_stations_data <- tail(intermediate_stations_data, nrow(intermediate_stations_data) - 1)         
-        # drop the arrival at destination
-        intermediate_stations_data <- head(intermediate_stations_data, nrow(intermediate_stations_data) - 1)         
+        # drop the departure at origin and the arrival at destination
+        intermediate_stations_data <- intermediate_stations_data[2:(nrow(intermediate_stations_data) - 1), ]         
         # identify the intermediate stations that have no arrival data
         stations_without_arrival <- intermediate_stations_data[intermediate_stations_data$body.event_type == 'DEPARTURE', ]$body.loc_stanox
         stations_without_arrival <- stations_without_arrival[!(stations_without_arrival %in% intermediate_stations_data[intermediate_stations_data$body.event_type == 'ARRIVAL', ]$body.loc_stanox)]
@@ -121,10 +126,34 @@ fill_in_missing_arrivals <- function (clean_day_data) {
             # add the dummy data to the original dataset 
             clean_day_data <<- rbind(clean_day_data, dummy_arrival_data)        
         }
-    })    
+    }   
     clean_day_data <- clean_day_data[with(clean_day_data, order(body.train_id, body.gbtt_timestamp, body.event_type)), ]    
     return(clean_day_data)
 }
+
+average_delay_at_station <- function (clean_day_data, stanox) {
+    station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
+    # find the list of trains that I can only see departing
+    trains_that_depart_only <- unique(station_data_only$body.train_id[!(station_data_only$body.train_id %in% unique(station_data_only[station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
+    trains_that_depart_only <- station_data_only[station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
+    if (nrow(trains_that_depart_only) > 0) {
+        # find the earliest recorded event in the train life
+        earliest_events <- clean_day_data %.% 
+            filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
+            group_by(body.train_id) %.% 
+            summarise(earliest_event = min(body.gbtt_timestamp))
+        # if the event is earlier than the departure at this station, it must have
+        # arrived at this station, too!
+        trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events)
+        trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
+        # add the arrival records
+        dummy_arrivals <- station_data_only[(station_data_only$body.train_id %in% trains_that_must_have_arrived) & (station_data_only$body.event_type == 'DEPARTURE'), ]
+        dummy_arrivals$body.event_type <- 'ARRIVAL'
+        station_data_only <<- rbind(station_data_only, dummy_arrivals)        
+    }
+    return(mean(station_data_only$body.timetable_variation))
+}
+
 
 # examples
 
