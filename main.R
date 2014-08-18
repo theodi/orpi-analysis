@@ -82,7 +82,7 @@ download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
     return(results)
 }
 
-prepare_for_map <- function (day_data) {
+drop_dirty_trains <- function (day_data) {
     # drop the trains that changed id (e.g. there were none on 13/8/2014)
     changed_id_trains <- unique(day_data[!is.na(day_data$body.current_train_id),]$body.train_id)
     day_data <- day_data[!(day_data$body.train_id %in% changed_id_trains), ]
@@ -98,6 +98,30 @@ prepare_for_map <- function (day_data) {
     # sort by train and expected timestamp for the events
     day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), ]    
     return(day_data)
+}
+
+# this function should be applied only to data that was pre-processed using
+# drop_dirty_trains above
+fill_in_missing_arrivals <- function (clean_day_data) {
+    train_ids <- unique(clean_day_data$body.train_id)
+    sapply(train_ids, function (train_id) {
+        # for the train being examined...
+        intermediate_stations_data <- clean_day_data[clean_day_data$body.train_id == train_id, ]
+        # drop the departure at origin
+        intermediate_stations_data <- tail(intermediate_stations_data, nrow(intermediate_stations_data) - 1)         
+        # drop the arrival at destination
+        intermediate_stations_data <- head(intermediate_stations_data, nrow(intermediate_stations_data) - 1)         
+        # identify the intermediate stations that have no arrival data
+        stations_without_arrival <- intermediate_stations_data[intermediate_stations_data$body.event_type == 'DEPARTURE', ]$body.loc_stanox
+        stations_without_arrival <- stations_without_arrival[!(stations_without_arrival %in% intermediate_stations_data[intermediate_stations_data$body.event_type == 'ARRIVAL', ]$body.loc_stanox)]
+        # create dummy arrival data by duplicating the departure data
+        dummy_arrival_data <- intermediate_stations_data[(intermediate_stations_data$body.loc_stanox %in% stations_without_arrival) & (intermediate_stations_data$body.event_type == 'DEPARTURE'), ]
+        dummy_arrival_data$body.event_type <- 'ARRIVAL'
+        # add the dummy data to the original dataset 
+        clean_day_data <<- rbind(clean_day_data, dummy_arrival_data)        
+    })    
+    clean_day_data <- clean_day_data[with(clean_day_data, order(body.train_id, body.gbtt_timestamp, body.event_type)), ]    
+    return(clean_day_data)
 }
 
 # examples
