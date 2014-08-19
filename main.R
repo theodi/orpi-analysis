@@ -80,7 +80,6 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
     max_possible_date_not_included <- as.POSIXct(paste0(formatC(format(tomorrow, "%Y"), width=4, flag="0"), "/", formatC(format(tomorrow, "%m"), width=2, flag="0"), "/", formatC(format(tomorrow, "%d"), width=2, flag="0"), " 00:00"))
     train_ids_in_scope <- results[(results$body.actual_timestamp >= rep(min_possible_date, nrow(results))) & (results$body.actual_timestamp < rep(max_possible_date_not_included, nrow(results))), ]$body.train_id
-    
     # filter out the trains that don't belong to the list above
     results <- results[results$body.train_id %in% train_ids_in_scope, ]
     
@@ -90,6 +89,7 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     # drop the trains that changed id (e.g. there were none on 13/8/2014)
     results <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
     results <- results[!(results$body.train_id %in% changed_id_trains), ]
+
     # identify trains that changed *any* of their planned locations (e.g. 
     # stations they stop at) and drop their entire journeys (e.g. there were 7 
     # out of 473162 on 13/8/2014)
@@ -100,6 +100,7 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     results <- results[, names(day_data) %in% c("body.train_id", 
       "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
       "body.gbtt_timestamp", "body.timetable_variation")]
+    
     # sort by train and expected timestamp for the events
     results <- results[with(results, order(body.train_id, body.gbtt_timestamp)), ]    
     
