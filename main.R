@@ -125,10 +125,10 @@ calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) 
         # all trains that have this as intermediate station can have one or two
         # events at this stage
         no_of_trains <- length(unique(station_data_only$body.train_id))
-        station_data_only <- station_data_only[station_data_only$body.timetable_variation >= MINIMUM_DELAY, ]
+        delayed_station_data_only <- station_data_only[station_data_only$body.timetable_variation >= MINIMUM_DELAY, ]
         # find the list of trains that I can only see departing
-        trains_that_depart_only <- unique(station_data_only$body.train_id[!(station_data_only$body.train_id %in% unique(station_data_only[station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
-        trains_that_depart_only <- station_data_only[station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
+        trains_that_depart_only <- unique(delayed_station_data_only$body.train_id[!(delayed_station_data_only$body.train_id %in% unique(delayed_station_data_only[delayed_station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
+        trains_that_depart_only <- delayed_station_data_only[delayed_station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
         if (nrow(trains_that_depart_only) > 0) {
             # find the earliest recorded event in the train life
             earliest_events <- clean_day_data %.% 
@@ -141,19 +141,19 @@ calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) 
             trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
             if (length(trains_that_must_have_arrived) > 0) {
                 # add dummy arrival records
-                dummy_arrivals <- station_data_only[(station_data_only$body.train_id %in% trains_that_must_have_arrived) & (station_data_only$body.event_type == 'DEPARTURE'), ]
+                dummy_arrivals <- delayed_station_data_only[(delayed_station_data_only$body.train_id %in% trains_that_must_have_arrived) & (delayed_station_data_only$body.event_type == 'DEPARTURE'), ]
                 dummy_arrivals$body.event_type <- 'ARRIVAL'
-                station_data_only <<- rbind(station_data_only, dummy_arrivals)                    
+                delayed_station_data_only <<- rbind(delayed_station_data_only, dummy_arrivals)                    
             }
         }
-        no_of_delayed_trains <- length(unique(station_data_only$body.train_id))
-        no_of_heavily_delayed_trains <- length(unique(station_data_only[station_data_only$body.timetable_variation >= HEAVY_DELAY, ]$body.train_id))
+        no_of_delayed_trains <- length(unique(delayed_station_data_only$body.train_id))
+        no_of_heavily_delayed_trains <- length(unique(delayed_station_data_only[delayed_station_data_only$body.timetable_variation >= HEAVY_DELAY, ]$body.train_id))
         return(data.frame(
             stanox = c(stanox),
             no_of_trains = c(no_of_trains),
             no_of_delayed_trains = c(no_of_delayed_trains),
             no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
-            average_delay = c(ifelse(nrow(station_data_only) > 0, mean(station_data_only$body.timetable_variation), 0)),
+            average_delay = c(ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0)),
             perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
             perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains)
         ))
