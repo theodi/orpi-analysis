@@ -87,17 +87,17 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     results$body.timetable_variation <- ifelse(results$body.variation_status == "EARLY", -1 * results$body.timetable_variation, results$body.timetable_variation)
 
     # drop the trains that changed id (e.g. there were none on 13/8/2014)
-    results <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
+    changed_id_trains <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
     results <- results[!(results$body.train_id %in% changed_id_trains), ]
 
     # identify trains that changed *any* of their planned locations (e.g. 
     # stations they stop at) and drop their entire journeys (e.g. there were 7 
     # out of 473162 on 13/8/2014)
     changed_location_trains <- unique(results[!is.na(results$body.original_loc_stanox), ]$body.train_id)
-    results <- results[!(day_data$body.train_id %in% changed_location_trains), ]
+    results <- results[!(results$body.train_id %in% changed_location_trains), ]
 
     # drop the columns I do not need
-    results <- results[, names(day_data) %in% c("body.train_id", 
+    results <- results[, names(results) %in% c("body.train_id", 
       "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
       "body.gbtt_timestamp", "body.timetable_variation")]
     
@@ -117,7 +117,7 @@ calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) 
     if (is.null(stanox)) {
         # run this branch if I did *not* specify the 'stanox' parameter
         stations <- sort(unique(clean_day_data$body.loc_stanox))
-        return(do.call(rbind, lapply(stations, function (stanox) average_delay_at_station(clean_day_data, stanox))))
+        return(do.call(rbind, lapply(stations, function (stanox) calculate_station_rank(clean_day_data, stanox))))
     } else {
         # run this branch if I *did* specify the 'stanox' parameter
         station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
