@@ -84,30 +84,29 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     # filter out the trains that don't belong to the list above
     results <- results[results$body.train_id %in% train_ids_in_scope, ]
     
+    # make $body.timetable_variation sign-aware
+    results$body.timetable_variation <- ifelse(results$body.variation_status == "EARLY", -1 * results$body.timetable_variation, results$body.timetable_variation)
+
+    # drop the trains that changed id (e.g. there were none on 13/8/2014)
+    results <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
+    results <- results[!(results$body.train_id %in% changed_id_trains), ]
+    # identify trains that changed *any* of their planned locations (e.g. 
+    # stations they stop at) and drop their entire journeys (e.g. there were 7 
+    # out of 473162 on 13/8/2014)
+    changed_location_trains <- unique(results[!is.na(results$body.original_loc_stanox), ]$body.train_id)
+    results <- results[!(day_data$body.train_id %in% changed_location_trains), ]
+
+    # drop the columns I do not need
+    results <- results[, names(day_data) %in% c("body.train_id", 
+      "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
+      "body.gbtt_timestamp", "body.timetable_variation")]
+    # sort by train and expected timestamp for the events
+    results <- results[with(results, order(body.train_id, body.gbtt_timestamp)), ]    
+    
     return(results)
 }
 
 download_data <- memoise(download_data_not_memoised)
-
-drop_dirty_trains_not_memoised <- function (day_data) {
-    # drop the trains that changed id (e.g. there were none on 13/8/2014)
-    changed_id_trains <- unique(day_data[!is.na(day_data$body.current_train_id),]$body.train_id)
-    day_data <- day_data[!(day_data$body.train_id %in% changed_id_trains), ]
-    # identify trains that changed *any* of their planned locations (e.g. 
-    # stations they stop at) and drop their entire journeys (e.g. there were 7 
-    # out of 473162 on 13/8/2014)
-    changed_location_trains <- unique(day_data[!is.na(day_data$body.original_loc_stanox), ]$body.train_id)
-    day_data <- day_data[!(day_data$body.train_id %in% changed_location_trains), ]
-    # drop the columns I do not need
-    day_data <- day_data[, names(day_data) %in% c("body.train_id", 
-       "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
-       "body.gbtt_timestamp", "body.timetable_variation")]
-    # sort by train and expected timestamp for the events
-    day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), ]    
-    return(day_data)
-}
-
-drop_dirty_trains <- memoise(drop_dirty_trains_not_memoised)
 
 # If the 'stanox' parameter is specified, this function calculates the average
 # delay for all trains arriving to or departing from that station as recorded in 
@@ -161,6 +160,33 @@ calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) 
 }
 
 calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
+
+calculate_segment_rank_not_memoised <- function (clean_day_data, from = NULL, to = NULL) {
+    if (is.null(from) | is.null(to)) {
+        
+    } else {
+        if (from > to) { temp <- from; from <- to; to <- temp }
+        
+        
+        return(data.frame(
+            from = c(from),
+            to = c(to),
+            no_of_trains = # number of trains that actually transited through the segment, either direction
+            no_of_delayed_trains = # number of trains delayed at either station
+            no_of_heavily_delayed_trains = # same, worst case at either station
+            average_delay = # average of the averages between departure and arrival at the extremes
+            perc_of_delayed_trains = # whatever
+            perc_of_heavily_delayed_trains = # whatever
+        ))
+    }
+} 
+
+#### UBER ORPI
+# a) weighted mean of the average delay at all stations vs the number of trains stopping at that station
+# b) define the mean delay for each train, and then calculate the mean of that vs all trains
+# c) mean of everything
+
+overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_variation >= MINIMUM_DELAY, ]$body.timetable_variation)
 
 # This functions generates a list of c(from = [stanox1], to = [stanox2]) 
 # representing all segments connecting two stations by at least one train that 
