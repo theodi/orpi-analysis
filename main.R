@@ -104,35 +104,6 @@ drop_dirty_trains <- function (day_data) {
     return(day_data)
 }
 
-# WE MAY DECIDE TO DROP THIS FUNCTION
-# this function should be applied only to data that was pre-processed using
-# drop_dirty_trains above
-fill_in_missing_arrivals <- function (clean_day_data) {
-    train_ids <- unique(clean_day_data$body.train_id)
-    total_no_of_trains <- length(train_ids)
-    current_train <- 0
-    for (train_id in train_ids) {
-        current_train <- current_train + 1
-        print(paste0("train_id ", train_id, ", ", current_train, "/", total_no_of_trains))
-        # for the train being examined...
-        intermediate_stations_data <- clean_day_data[clean_day_data$body.train_id == train_id, ]
-        # drop the departure at origin and the arrival at destination
-        intermediate_stations_data <- intermediate_stations_data[2:(nrow(intermediate_stations_data) - 1), ]         
-        # identify the intermediate stations that have no arrival data
-        stations_without_arrival <- intermediate_stations_data[intermediate_stations_data$body.event_type == 'DEPARTURE', ]$body.loc_stanox
-        stations_without_arrival <- stations_without_arrival[!(stations_without_arrival %in% intermediate_stations_data[intermediate_stations_data$body.event_type == 'ARRIVAL', ]$body.loc_stanox)]
-        # create dummy arrival data by duplicating the departure data
-        if (length(stations_without_arrival) > 0) {
-            dummy_arrival_data <- intermediate_stations_data[(intermediate_stations_data$body.loc_stanox %in% stations_without_arrival) & (intermediate_stations_data$body.event_type == 'DEPARTURE'), ]
-            dummy_arrival_data$body.event_type <- 'ARRIVAL'
-            # add the dummy data to the original dataset 
-            clean_day_data <<- rbind(clean_day_data, dummy_arrival_data)        
-        }
-    }   
-    clean_day_data <- clean_day_data[with(clean_day_data, order(body.train_id, body.gbtt_timestamp, body.event_type)), ]    
-    return(clean_day_data)
-}
-
 # If the 'stanox' parameter is specified, this function calculates the average
 # delay for all trains arriving to or departing from that station as recorded in 
 # 'clean_day_data'. Otherwise, it returns a data.frame with all average delays 
