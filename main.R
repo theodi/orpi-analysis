@@ -4,6 +4,7 @@
 #   script
 
 library(dplyr)
+library(memoise)
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
 MINIMUM_DELAY <- 3
@@ -18,8 +19,8 @@ options(digits=12)
 # following day.
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
-# the MD5 of multipart uploads 
-download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
+# the MD5 of multipart uploads
+download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
 
     # Returns the list of all available files that could include events
     # that took place in the specified target date and within the specified
@@ -86,7 +87,9 @@ download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
     return(results)
 }
 
-drop_dirty_trains <- function (day_data) {
+download_data <- memoise(download_data_not_memoised)
+
+drop_dirty_trains_not_memoised <- function (day_data) {
     # drop the trains that changed id (e.g. there were none on 13/8/2014)
     changed_id_trains <- unique(day_data[!is.na(day_data$body.current_train_id),]$body.train_id)
     day_data <- day_data[!(day_data$body.train_id %in% changed_id_trains), ]
@@ -104,11 +107,13 @@ drop_dirty_trains <- function (day_data) {
     return(day_data)
 }
 
+drop_dirty_trains <- memoise(drop_dirty_trains_not_memoised)
+
 # If the 'stanox' parameter is specified, this function calculates the average
 # delay for all trains arriving to or departing from that station as recorded in 
 # 'clean_day_data'. Otherwise, it returns a data.frame with all average delays 
 # for each stanox listed in 'clean_day_data'.
-average_delay_at_station <- function (clean_day_data, stanox = NULL) {
+calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) {
     if (is.null(stanox)) {
         # run this branch if I did *not* specify the 'stanox' parameter
         stations <- sort(unique(clean_day_data$body.loc_stanox))
@@ -154,6 +159,8 @@ average_delay_at_station <- function (clean_day_data, stanox = NULL) {
         ))
     }
 }
+
+calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
 
 # This functions generates a list of c(from = [stanox1], to = [stanox2]) 
 # representing all segments connecting two stations by at least one train that 
