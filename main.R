@@ -6,6 +6,8 @@
 library(dplyr)
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
+MINIMUM_DELAY <- 3
+HEAVY_DELAY <- 30
 
 # let's see integer numerics as such!
 options(digits=12)
@@ -137,10 +139,17 @@ fill_in_missing_arrivals <- function (clean_day_data) {
 # for each stanox listed in 'clean_day_data'.
 average_delay_at_station <- function (clean_day_data, stanox = NULL) {
     if (is.null(stanox)) {
+        # run this branch if I did *not* specify the 'stanox' parameter
         stations <- sort(unique(clean_day_data$body.loc_stanox))
         return(do.call(rbind, lapply(stations, function (stanox) average_delay_at_station(clean_day_data, stanox))))
     } else {
+        # run this branch if I *did* specify the 'stanox' parameter
         station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
+        # remember below that the number of events is NOT the number of trains,
+        # all trains that have this as intermediate station can have one or two
+        # events at this stage
+        no_of_trains <- length(unique(station_data_only$body.train_id))
+        station_data_only <- station_data_only[station_data_only$body.timetable_variation >= MINIMUM_DELAY, ]
         # find the list of trains that I can only see departing
         trains_that_depart_only <- unique(station_data_only$body.train_id[!(station_data_only$body.train_id %in% unique(station_data_only[station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
         trains_that_depart_only <- station_data_only[station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
@@ -161,10 +170,16 @@ average_delay_at_station <- function (clean_day_data, stanox = NULL) {
                 station_data_only <<- rbind(station_data_only, dummy_arrivals)                    
             }
         }
+        no_of_delayed_trains <- length(unique(station_data_only$body.train_id))
+        no_of_heavily_delayed_trains <- length(unique(station_data_only[station_data_only$body.timetable_variation >= HEAVY_DELAY, ]$body.train_id))
         return(data.frame(
             stanox = c(stanox),
-            average_delay = c(mean(station_data_only$body.timetable_variation)),
-            perc_delay_ge_30_minutes = c(nrow(station_data_only[station_data_only$body.timetable_variation >= 30, ]) / nrow(station_data_only))
+            no_of_trains = c(no_of_trains),
+            no_of_delayed_trains = c(no_of_delayed_trains),
+            no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
+            average_delay = c(ifelse(nrow(station_data_only) > 0, mean(station_data_only$body.timetable_variation), 0)),
+            perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
+            perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains)
         ))
     }
 }
