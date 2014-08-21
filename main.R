@@ -222,12 +222,12 @@ make_geojson <- function (reporting_points_ranking) {
     names(corpus) <- c("crs", "stanox", "lat", "lon", "description")
     # join with the reporting points ranking data
     reporting_points_ranking <- left_join(reporting_points_ranking, corpus, by = "stanox")
+    # GIANFRANCO: let's include matching diagnostics if it makes sense here.
     # drop the reporting points that don't have latlong
     reporting_points_ranking <- reporting_points_ranking[!(is.na(reporting_points_ranking$lat) | is.na(reporting_points_ranking$lon)), ]
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        # FOR ULRICH
         features = sapply(lapply(split(reporting_points_ranking, seq_along(reporting_points_ranking[, 1])), as.list), function (rp) {
             return(list(
                 type = "Feature",
