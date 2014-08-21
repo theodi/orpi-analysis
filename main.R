@@ -227,7 +227,7 @@ make_geojson <- function (reporting_points_ranking) {
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        features = c(
+        features = list(
             list(
                 type = "Feature",
                 geometry = list(type = "Point", coordinates = c(102.0, 0.5)),
@@ -235,9 +235,17 @@ make_geojson <- function (reporting_points_ranking) {
                     "title" = "London Euston",
                     "description" = "This is the description for London Euston",
                     "marker-size" = "large",
-                    "marker-symbol" = "rail",
-                    "stroke": "#000000"
-                                  
+                    "marker-symbol" = "rail"
+                )
+            ),    
+            list(
+                type = "Feature",
+                geometry = list(type = "Point", coordinates = c(104.0, 1)),
+                properties = list(
+                    "title" = "London King's Cross",
+                    "description" = "This is the description for London King's Cross",
+                    "marker-size" = "large",
+                    "marker-symbol" = "rail"
                 )
             )    
         )
