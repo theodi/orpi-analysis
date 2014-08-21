@@ -227,28 +227,19 @@ make_geojson <- function (reporting_points_ranking) {
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        features = list(
-            list(
+        features = apply(reporting_points_ranking, 1, function (rp) {
+            print(rp)
+            return(list(
                 type = "Feature",
-                geometry = list(type = "Point", coordinates = c(102.0, 0.5)),
+                geometry = list(type = "Point", coordinates = c(rp$lat, rp$lon)),
                 properties = list(
-                    "title" = "London Euston",
-                    "description" = "This is the description for London Euston",
+                    "title" = rp$description,
+                    "description" = paste0("This is the description for ", rp$description),
                     "marker-size" = "large",
                     "marker-symbol" = "rail"
                 )
-            ),    
-            list(
-                type = "Feature",
-                geometry = list(type = "Point", coordinates = c(104.0, 1)),
-                properties = list(
-                    "title" = "London King's Cross",
-                    "description" = "This is the description for London King's Cross",
-                    "marker-size" = "large",
-                    "marker-symbol" = "rail"
-                )
-            )    
-        )
+            ))              
+        })
     )
     fileConn <- file("foo.geojson")
     writeLines(toJSON(json_structure), fileConn)
