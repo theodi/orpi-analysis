@@ -136,7 +136,7 @@ integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
         trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
         if (length(trains_that_must_have_arrived) > 0) {
             # add dummy arrival records
-            dummy_arrivals <- day_data[(day_data$body.train_id %in% trains_that_must_have_arrived) & (delayed_station_data_only$body.event_type == 'DEPARTURE'), ]
+            dummy_arrivals <- location_data[(location_data$body.train_id %in% trains_that_must_have_arrived) & (location_data$body.event_type == 'DEPARTURE'), ]
             dummy_arrivals$body.event_type <- 'ARRIVAL'
             location_data <<- rbind(location_data, dummy_arrivals)                    
         }
