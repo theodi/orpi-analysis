@@ -5,8 +5,11 @@
 
 library(dplyr)
 library(memoise)
+library(RCurl)
+library(rjson)
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
+CORPUS_DOWNLOAD_URL <- "https://raw.githubusercontent.com/theodi/orpi-corpus/master/corpus.csv"
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 
@@ -181,10 +184,11 @@ calculate_segment_rank_not_memoised <- function (clean_day_data, from = NULL, to
             }))        
             return(unique(segments))
         }
+    
+        # LOTS OF CODE GOES HERE
         
         return(generate_all_segments(clean_day_data))
-        
-        
+    
     } else {
         if (from > to) { temp <- from; from <- to; to <- temp }
         
@@ -208,6 +212,35 @@ calculate_segment_rank_not_memoised <- function (clean_day_data, from = NULL, to
 # c) mean of everything
 
 overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_variation >= MINIMUM_DELAY, ]$body.timetable_variation)
+
+# early mapping
+
+make_geojson <- function (reporting_points_ranking) {
+    # load the latest version of the corpus and drop the nodes that have no geographic coordinates
+    corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
+    corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
+    names(corpus) <- c("crs", "stanox", "lat", "lon", "description")
+    # join with the reporting points ranking data
+    reporting_points_ranking <- left_join(reporting_points_ranking, corpus, by = "stanox")
+    # drop the reporting points that don't have latlong
+    reporting_points_ranking <- reporting_points_ranking[!(is.na(reporting_points_ranking$lat) | is.na(reporting_points_ranking$lon)), ]
+    # create the JSON
+    json_structure <- list(
+        type = "FeatureCollection",
+        features = c(
+            list(
+                type = "Feature",
+                geometry = list(type = "Point", coordinates = c(102.0, 0.5)),
+                properties = list(prop0 = "value0")
+            )    
+        )
+    )
+    fileConn <- file("foo.geojson")
+    writeLines(toJSON(json_structure), fileConn)
+    close(fileConn)
+    return(reporting_points_ranking)
+}
+
 
 # examples
 
