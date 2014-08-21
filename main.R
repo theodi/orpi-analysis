@@ -10,6 +10,7 @@ library(rjson)
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
 CORPUS_DOWNLOAD_URL <- "https://raw.githubusercontent.com/theodi/orpi-corpus/master/corpus.csv"
+RIGHT_TIME <- 1
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 
@@ -128,6 +129,7 @@ calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) 
         # all trains that have this as intermediate station can have one or two
         # events at this stage
         no_of_trains <- length(unique(station_data_only$body.train_id))
+        no_of_right_time_trains <- length(unique(station_data_only[station_data_only$body.timetable_variation <= RIGHT_TIME, ]$body.train_id))
         delayed_station_data_only <- station_data_only[station_data_only$body.timetable_variation >= MINIMUM_DELAY, ]
         # find the list of trains that I can only see departing
         trains_that_depart_only <- unique(delayed_station_data_only$body.train_id[!(delayed_station_data_only$body.train_id %in% unique(delayed_station_data_only[delayed_station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
@@ -154,9 +156,11 @@ calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) 
         return(data.frame(
             stanox = c(stanox),
             no_of_trains = c(no_of_trains),
+            no_of_right_time_trains = c(no_of_right_time_trains),
             no_of_delayed_trains = c(no_of_delayed_trains),
             no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
             average_delay = c(ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0)),
+            perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
             perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
             perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains)
         ))
@@ -215,7 +219,7 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 
 # early mapping
 
-make_geojson <- function (reporting_points_ranking) {
+make_geojson <- function (reporting_points_ranking, filename) {
     # load the latest version of the corpus and drop the nodes that have no geographic coordinates
     corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
