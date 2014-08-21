@@ -7,7 +7,7 @@ library(dplyr)
 library(memoise)
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
-MINIMUM_DELAY <- 3
+MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 
 # let's see integer numerics as such!
