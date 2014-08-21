@@ -231,7 +231,7 @@ make_geojson <- function (reporting_points_ranking) {
         features = sapply(lapply(split(reporting_points_ranking, seq_along(reporting_points_ranking[, 1])), as.list), function (rp) {
             return(list(
                 type = "Feature",
-                geometry = list(type = "Point", coordinates = c(rp$lat, rp$lon)),
+                geometry = list(type = "Point", coordinates = c(rp$lon, rp$lat)),
                 properties = list(
                     "title" = rp$description,
                     "description" = paste0("This is the description for ", rp$description),
