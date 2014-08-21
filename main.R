@@ -113,44 +113,55 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
 
 download_data <- memoise(download_data_not_memoised)
 
+# Not all location data shows the arrival of trains at intermediate stations
+# in a journey, typically when the timetable sets identical arrival and 
+# re-departure times. This function integrates the data for the specified 
+# stanox with all the missing arrivals, inferred from the existence of previous
+# events in the life of the train, and returns that stanox data only.
+integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
+    # extracts the data that exists already about this location
+    location_data <- day_data[day_data$body.loc_stanox == stanox, ]
+    # find the list of trains that I can only see departing
+    trains_that_depart_only <- unique(location_data$body.train_id[!(location_data$body.train_id %in% unique(location_data[location_data$body.event_type == 'ARRIVAL', ]$body.train_id))])
+    trains_that_depart_only <- location_data[location_data$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
+    if (nrow(trains_that_depart_only) > 0) {
+        # find the earliest recorded event in the train life
+        earliest_events <- day_data %.% 
+            filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
+            group_by(body.train_id) %.% 
+            summarise(earliest_event = min(body.gbtt_timestamp))
+        # if the earliest event is earlier than the departure at this station, 
+        # the train must have arrived at this station, too!
+        trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events, by = "body.train_id")
+        trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
+        if (length(trains_that_must_have_arrived) > 0) {
+            # add dummy arrival records
+            dummy_arrivals <- day_data[(day_data$body.train_id %in% trains_that_must_have_arrived) & (delayed_station_data_only$body.event_type == 'DEPARTURE'), ]
+            dummy_arrivals$body.event_type <- 'ARRIVAL'
+            location_data <<- rbind(location_data, dummy_arrivals)                    
+        }
+    }
+    return(location_data)
+}
+
+integrate_with_missing_arrivals <- memoise(integrate_with_missing_arrivals_not_memoised)
+
 # If the 'stanox' parameter is specified, this function calculates the average
 # delay for all trains arriving to or departing from that station as recorded in 
 # 'clean_day_data'. Otherwise, it returns a data.frame with all average delays 
 # for each stanox listed in 'clean_day_data'.
-calculate_station_rank_not_memoised <- function (clean_day_data, stanox = NULL) {
+calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
     if (is.null(stanox)) {
         # run this branch if I did *not* specify the 'stanox' parameter
-        stations <- sort(unique(clean_day_data$body.loc_stanox))
-        return(do.call(rbind, lapply(stations, function (stanox) calculate_station_rank(clean_day_data, stanox))))
+        stations <- sort(unique(day_data$body.loc_stanox))
+        return(do.call(rbind, lapply(stations, function (stanox) calculate_station_rank(day_data, stanox))))
     } else {
         # run this branch if I *did* specify the 'stanox' parameter
-        station_data_only <- clean_day_data[clean_day_data$body.loc_stanox == stanox, ]
-        # remember below that the number of events is NOT the number of trains,
-        # all trains that have this as intermediate station can have one or two
-        # events at this stage
+        station_data_only <- integrate_with_missing_arrivals(day_data, stanox)
+        # starts calculating the stats for the location
         no_of_trains <- length(unique(station_data_only$body.train_id))
         no_of_right_time_trains <- length(unique(station_data_only[station_data_only$body.timetable_variation <= RIGHT_TIME, ]$body.train_id))
         delayed_station_data_only <- station_data_only[station_data_only$body.timetable_variation >= MINIMUM_DELAY, ]
-        # find the list of trains that I can only see departing
-        trains_that_depart_only <- unique(delayed_station_data_only$body.train_id[!(delayed_station_data_only$body.train_id %in% unique(delayed_station_data_only[delayed_station_data_only$body.event_type == 'ARRIVAL', ]$body.train_id))])
-        trains_that_depart_only <- delayed_station_data_only[delayed_station_data_only$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
-        if (nrow(trains_that_depart_only) > 0) {
-            # find the earliest recorded event in the train life
-            earliest_events <- clean_day_data %.% 
-                filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
-                group_by(body.train_id) %.% 
-                summarise(earliest_event = min(body.gbtt_timestamp))
-            # if the earliest event is earlier than the departure at this station, 
-            # the train must have arrived at this station, too!
-            trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events, by = "body.train_id")
-            trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
-            if (length(trains_that_must_have_arrived) > 0) {
-                # add dummy arrival records
-                dummy_arrivals <- delayed_station_data_only[(delayed_station_data_only$body.train_id %in% trains_that_must_have_arrived) & (delayed_station_data_only$body.event_type == 'DEPARTURE'), ]
-                dummy_arrivals$body.event_type <- 'ARRIVAL'
-                delayed_station_data_only <<- rbind(delayed_station_data_only, dummy_arrivals)                    
-            }
-        }
         no_of_delayed_trains <- length(unique(delayed_station_data_only$body.train_id))
         no_of_heavily_delayed_trains <- length(unique(delayed_station_data_only[delayed_station_data_only$body.timetable_variation >= HEAVY_DELAY, ]$body.train_id))
         return(data.frame(
@@ -250,24 +261,3 @@ make_geojson <- function (reporting_points_ranking, filename) {
     close(fileConn)
     return(json_structure)
 }
-
-
-# examples
-
-# how many train services we recorded yesterday?
-all_arrivals_yesterday <- download_data()
-length(unique(all_arrivals_yesterday$body.train_id))
-
-# how many train services we recorded on 4 August 2014?
-all_arrivals_4_august_2014 <- download_data(as.Date("2014/08/04"))
-length(unique(all_arrivals_yesterday$body.train_id))
-
-# what % were delayed at the final destination? note that there may be more
-# than one final destination arrival records for the same train id!
-delayed_at_final_destination <- all_arrivals_yesterday[(all_arrivals_yesterday$body.planned_event_type == "DESTINATION") & (all_arrivals_yesterday$body.variation_status == "LATE"), ]
-length(unique(delayed_at_final_destination$body.train_id)) / length(unique(all_arrivals_yesterday$body.train_id))
-
-# what was the average delay in minutes of trains that were delayed at their 
-# final destination? (will ignore that there are duplicates)
-mean(delayed_at_final_destination$body.timetable_variation)
-
