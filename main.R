@@ -227,8 +227,8 @@ make_geojson <- function (reporting_points_ranking) {
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        features = apply(reporting_points_ranking, 1, function (rp) {
-            print(rp)
+        # FOR ULRICH
+        features = lapply(lapply(split(reporting_points_ranking, seq_along(reporting_points_ranking[, 1])), as.list), function (rp) {
             return(list(
                 type = "Feature",
                 geometry = list(type = "Point", coordinates = c(rp$lat, rp$lon)),
@@ -244,7 +244,7 @@ make_geojson <- function (reporting_points_ranking) {
     fileConn <- file("foo.geojson")
     writeLines(toJSON(json_structure), fileConn)
     close(fileConn)
-    return(reporting_points_ranking)
+    return(json_structure)
 }
 
 
