@@ -231,7 +231,14 @@ make_geojson <- function (reporting_points_ranking) {
             list(
                 type = "Feature",
                 geometry = list(type = "Point", coordinates = c(102.0, 0.5)),
-                properties = list(prop0 = "value0")
+                properties = list(
+                    "title" = "London Euston",
+                    "description" = "This is the description for London Euston",
+                    "marker-size" = "large",
+                    "marker-symbol" = "rail",
+                    "stroke": "#000000"
+                                  
+                )
             )    
         )
     )
