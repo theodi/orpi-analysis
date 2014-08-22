@@ -187,25 +187,27 @@ calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
 
 calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
 
-calculate_segment_rank_not_memoised <- function (clean_day_data, from = NULL, to = NULL) {
-    if (is.null(from) | is.null(to)) {
+# This functions generates a list of c(from = [stanox1], to = [stanox2]) 
+# representing all segments connecting two stations by at least one train that 
+# does not stop at any intermediate station. The direction of the train is not
+# relevant and the segment is represented by the two stanox codes in 
+# alphabetical order.
+generate_all_segments_not_memoised <- function (day_data) {
+    clean_day_data <- clean_day[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
+    segments <- do.call(rbind, lapply(unique(day_data$body.train_id), function (train_id) {
+        stations <- unique(day_data[day_data$body.train_id == train_id, ]$body.loc_stanox)
+        return(do.call(rbind, lapply(1:(length(stations) - 1), function (i) {
+            segment <- sort(c(stations[i], stations[i+1]))
+            return(data.frame(from = c(segment[1]), to = c(segment[2])))
+        })))    
+    }))        
+    return(unique(segments))
+}
 
-        # This functions generates a list of c(from = [stanox1], to = [stanox2]) 
-        # representing all segments connecting two stations by at least one train that 
-        # does not stop at any intermediate station. The direction of the train is not
-        # relevant and the segment is represented by the two stanox codes in 
-        # alphabetical order.
-        generate_all_segments <- function (clean_day_data) {
-            clean_day_data <- clean_day_data[with(clean_day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
-            segments <- do.call(rbind, lapply(unique(clean_day_data$body.train_id), function (train_id) {
-                stations <- unique(clean_day_data[clean_day_data$body.train_id == train_id, ]$body.loc_stanox)
-                return(do.call(rbind, lapply(1:(length(stations) - 1), function (i) {
-                    segment <- sort(c(stations[i], stations[i+1]))
-                    return(data.frame(from = c(segment[1]), to = c(segment[2])))
-                })))    
-            }))        
-            return(unique(segments))
-        }
+generate_all_segments <- memoise(generate_all_segments_not_memoised)
+
+calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NULL) {
+    if (is.null(from) | is.null(to)) {
     
         # LOTS OF CODE GOES HERE
         
