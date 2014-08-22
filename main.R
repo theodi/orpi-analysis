@@ -183,12 +183,12 @@ calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
             stanox = c(stanox),
             no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
-            no_of_delayed_trains = c(no_of_delayed_trains),
-            no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
-            average_delay = c(ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0)),
             perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
+            no_of_delayed_trains = c(no_of_delayed_trains),
             perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
-            perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains)
+            no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
+            perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains),
+            average_delay = c(ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0))
         ))
     }
 }
