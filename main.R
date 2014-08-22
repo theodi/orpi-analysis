@@ -146,17 +146,19 @@ integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
 
 integrate_with_missing_arrivals <- memoise(integrate_with_missing_arrivals_not_memoised)
 
-# If the 'stanox' parameter is specified, this function calculates the average
-# delay for all trains arriving to or departing from that station as recorded in 
-# 'clean_day_data'. Otherwise, it returns a data.frame with all average delays 
-# for each stanox listed in 'clean_day_data'.
+# If the 'stanox' parameter is specified (single stanox or vector of stanox codes), 
+# this function calculates the average delay for all trains arriving to or 
+# departing from that station as recorded in 'day_data'. Otherwise, it returns a 
+# data.frame with all average delays for each stanox listed in 'clean_day_data'.
 calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
     if (is.null(stanox)) {
-        # run this branch if I did *not* specify the 'stanox' parameter
-        stations <- sort(unique(day_data$body.loc_stanox))
-        return(do.call(rbind, lapply(stations, function (stanox) calculate_station_rank(day_data, stanox))))
+        # if stanox is not specified, do the job for all stations
+        return(calculate_station_rank(day_data, sort(unique(day_data$body.loc_stanox))))
+    } else if (is.vector(stanox)) {
+        # if stanox is a vector, do the job for the listed stations only
+        return(do.call(rbind, lapply(stanox, function (stanox) calculate_station_rank(day_data, stanox))))
     } else {
-        # run this branch if I *did* specify the 'stanox' parameter
+        # if stanox is not a vector, do the job for that station only
         station_data_only <- integrate_with_missing_arrivals(day_data, stanox)
         # starts calculating the stats for the location
         no_of_trains <- length(unique(station_data_only$body.train_id))
