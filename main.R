@@ -220,10 +220,8 @@ generate_all_segments <- memoise(generate_all_segments_not_memoised)
 
 calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NULL) {
     if (is.null(from) || is.null(to)) {
-    
-        # LOTS OF CODE GOES HERE
-        
-        return(generate_all_segments(day_data))
+        segments <- generate_all_segments(day_data)
+        return(do.call(rbind, lapply(lapply(split(segments, seq_along(segments[, 1])), as.list), function (segment) calculate_segment_rank(day_data, segment$from, segment$to))))
     } else {
         if (from > to) { temp <- from; from <- to; to <- temp }
         segment_trains <- intersect(
@@ -232,6 +230,7 @@ calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NUL
         )
         segment_data <- integrate_with_missing_arrivals(day_data, c(from, to))
         segment_data <- segment_data[segment_data$body.train_id %in% segment_trains, ]
+        no_of_trains <- length(unique(segment_data$body.train_id))
         right_time_trains <- segment_data[segment_data$body.timetable_variation <= RIGHT_TIME, ]
         no_of_right_time_trains <- length(unique(right_time_trains$body.train_id))
         delayed_trains <- segment_data[segment_data$body.timetable_variation >= MINIMUM_DELAY, ]
@@ -241,14 +240,14 @@ calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NUL
         return(data.frame(
             from = c(from),
             to = c(to),
-            no_of_trains = c(length(segment_trains)),
+            no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
             perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
             no_of_delayed_trains = c(no_of_delayed_trains),
             perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
             no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
             perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains),
-            average_delay <- c(mean(delayed_trains$body.timetable_variation))
+            average_delay = c(mean(delayed_trains$body.timetable_variation))
         ))
     }
 } 
