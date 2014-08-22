@@ -247,7 +247,7 @@ calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NUL
             perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
             no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
             perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains),
-            average_delay = c(mean(delayed_trains$body.timetable_variation))
+            average_delay = c(ifelse(nrow(delayed_trains) > 0, mean(delayed_trains$body.timetable_variation), 0))
         ))
     }
 } 
