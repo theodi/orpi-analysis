@@ -100,6 +100,14 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     changed_location_trains <- unique(results[!is.na(results$body.original_loc_stanox), ]$body.train_id)
     results <- results[!(results$body.train_id %in% changed_location_trains), ]
 
+    # drop the trains that stop at one station only (???, e.g. on 16/8/2014
+    # there were 80 out of 19816)
+    trains_with_one_station_only <- unique(results %.%
+        group_by(body.train_id) %.%
+        summarise(no_of_stations = length(unique(body.loc_stanox))) %.%
+        filter(no_of_stations < 2))
+    results <- results[!(results$body.train_id %in% trains_with_one_station_only$body.train_id), ]
+    
     # drop the columns I do not need
     results <- results[, names(results) %in% c("body.train_id", 
       "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
