@@ -193,10 +193,14 @@ calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
 # relevant and the segment is represented by the two stanox codes in 
 # alphabetical order.
 generate_all_segments_not_memoised <- function (day_data) {
-    clean_day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
+    # the sorting below is instrumental
+    day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
     segments <- do.call(rbind, lapply(unique(day_data$body.train_id), function (train_id) {
+        # for each train, identify all stations it goes through
         stations <- unique(day_data[day_data$body.train_id == train_id, ]$body.loc_stanox)
         return(do.call(rbind, lapply(1:(length(stations) - 1), function (i) {
+            # for each station, create one segment between each consecutive
+            # station
             segment <- sort(c(stations[i], stations[i+1]))
             return(data.frame(from = c(segment[1]), to = c(segment[2])))
         })))    
