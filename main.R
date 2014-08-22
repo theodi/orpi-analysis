@@ -193,7 +193,7 @@ calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
 # relevant and the segment is represented by the two stanox codes in 
 # alphabetical order.
 generate_all_segments_not_memoised <- function (day_data) {
-    clean_day_data <- clean_day[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
+    clean_day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
     segments <- do.call(rbind, lapply(unique(day_data$body.train_id), function (train_id) {
         stations <- unique(day_data[day_data$body.train_id == train_id, ]$body.loc_stanox)
         return(do.call(rbind, lapply(1:(length(stations) - 1), function (i) {
@@ -211,8 +211,7 @@ calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NUL
     
         # LOTS OF CODE GOES HERE
         
-        return(generate_all_segments(clean_day_data))
-    
+        return(generate_all_segments(day_data))
     } else {
         if (from > to) { temp <- from; from <- to; to <- temp }
         
