@@ -218,20 +218,34 @@ calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NUL
         return(generate_all_segments(day_data))
     } else {
         if (from > to) { temp <- from; from <- to; to <- temp }
-        
-        
+        segment_trains <- intersect(
+            unique(day_data[day_data$body.loc_stanox == from, ]$body.train_id),
+            unique(day_data[day_data$body.loc_stanox == to, ]$body.train_id)
+        )
+        segment_data <- integrate_with_missing_arrivals(day_data, c(from, to))
+        segment_data <- segment_data[segment_data$body.train_id %in% segment_trains, ]
+        right_time_trains <- segment_data[segment_data$body.timetable_variation <= RIGHT_TIME, ]
+        no_of_right_time_trains <- length(unique(right_time_trains$body.train_id))
+        delayed_trains <- segment_data[segment_data$body.timetable_variation >= MINIMUM_DELAY, ]
+        no_of_delayed_trains <- length(unique(delayed_trains$body.train_id))
+        heavily_delayed_trains <- delayed_trains[delayed_trains$body.timetable_variation >= HEAVY_DELAY, ]
+        no_of_heavily_delayed_trains <- length(unique(heavily_delayed_trains$body.train_id))
         return(data.frame(
             from = c(from),
             to = c(to),
-            no_of_trains = # number of trains that actually transited through the segment, either direction
-            no_of_delayed_trains = # number of trains delayed at either station
-            no_of_heavily_delayed_trains = # same, worst case at either station
-            average_delay = # average of the averages between departure and arrival at the extremes
-            perc_of_delayed_trains = # whatever
-            perc_of_heavily_delayed_trains = # whatever
+            no_of_trains = c(length(segment_trains)),
+            no_of_right_time_trains = c(no_of_right_time_trains),
+            perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
+            no_of_delayed_trains = c(no_of_delayed_trains),
+            perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
+            no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
+            perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains),
+            average_delay <- c(mean(delayed_trains$body.timetable_variation))
         ))
     }
 } 
+
+calculate_segment_rank <- memoise(calculate_segment_rank_not_memoised)
 
 #### UBER ORPI
 # a) weighted mean of the average delay at all stations vs the number of trains stopping at that station
