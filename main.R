@@ -128,7 +128,7 @@ download_data <- memoise(download_data_not_memoised)
 # with all the missing arrivals, inferred from the existence of previous
 # events in the life of the train, and returns that stanox data only.
 integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
-    if (is.vector(stanox)) {
+    if (is.vector(stanox) && (length(stanox) > 1)) {
         return(unique(do.call(rbind, lapply(stanox, function (stanox) integrate_with_missing_arrivals(day_data, stanox)))))
     } else {
         # extracts the data that exists already about this location
@@ -167,7 +167,7 @@ calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
     if (is.null(stanox)) {
         # if stanox is not specified, do the job for all stations
         return(calculate_station_rank(day_data, sort(unique(day_data$body.loc_stanox))))
-    } else if (is.vector(stanox)) {
+    } else if (is.vector(stanox) && (length(stanox) > 1)) {
         # if stanox is a vector, do the job for the listed stations only
         return(do.call(rbind, lapply(stanox, function (stanox) calculate_station_rank(day_data, stanox))))
     } else {
