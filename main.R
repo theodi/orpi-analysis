@@ -115,33 +115,38 @@ download_data <- memoise(download_data_not_memoised)
 
 # Not all location data shows the arrival of trains at intermediate stations
 # in a journey, typically when the timetable sets identical arrival and 
-# re-departure times. This function integrates the data for the specified 
-# stanox with all the missing arrivals, inferred from the existence of previous
+# re-departure times. 
+# This function integrates the data for the specified stanox or list of stanox
+# with all the missing arrivals, inferred from the existence of previous
 # events in the life of the train, and returns that stanox data only.
 integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
-    # extracts the data that exists already about this location
-    location_data <- day_data[day_data$body.loc_stanox == stanox, ]
-    # find the list of trains that I can only see departing
-    trains_that_depart_only <- unique(location_data$body.train_id[!(location_data$body.train_id %in% unique(location_data[location_data$body.event_type == 'ARRIVAL', ]$body.train_id))])
-    trains_that_depart_only <- location_data[location_data$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
-    if (nrow(trains_that_depart_only) > 0) {
-        # find the earliest recorded event in the train life
-        earliest_events <- day_data %.% 
-            filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
-            group_by(body.train_id) %.% 
-            summarise(earliest_event = min(body.gbtt_timestamp))
-        # if the earliest event is earlier than the departure at this station, 
-        # the train must have arrived at this station, too!
-        trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events, by = "body.train_id")
-        trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
-        if (length(trains_that_must_have_arrived) > 0) {
-            # add dummy arrival records
-            dummy_arrivals <- location_data[(location_data$body.train_id %in% trains_that_must_have_arrived) & (location_data$body.event_type == 'DEPARTURE'), ]
-            dummy_arrivals$body.event_type <- 'ARRIVAL'
-            location_data <<- rbind(location_data, dummy_arrivals)                    
+    if (is.vector(stanox)) {
+        return(unique(do.call(rbind, lapply(stanox, function (stanox) integrate_with_missing_arrivals(day_data, stanox)))))
+    } else {
+        # extracts the data that exists already about this location
+        location_data <- day_data[day_data$body.loc_stanox == stanox, ]
+        # find the list of trains that I can only see departing
+        trains_that_depart_only <- unique(location_data$body.train_id[!(location_data$body.train_id %in% unique(location_data[location_data$body.event_type == 'ARRIVAL', ]$body.train_id))])
+        trains_that_depart_only <- location_data[location_data$body.train_id %in% trains_that_depart_only, c("body.train_id", "body.gbtt_timestamp")]
+        if (nrow(trains_that_depart_only) > 0) {
+            # find the earliest recorded event in the train life
+            earliest_events <- day_data %.% 
+                filter(body.train_id %in% trains_that_depart_only$body.train_id) %.% 
+                group_by(body.train_id) %.% 
+                summarise(earliest_event = min(body.gbtt_timestamp))
+            # if the earliest event is earlier than the departure at this station, 
+            # the train must have arrived at this station, too!
+            trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events, by = "body.train_id")
+            trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
+            if (length(trains_that_must_have_arrived) > 0) {
+                # add dummy arrival records
+                dummy_arrivals <- location_data[(location_data$body.train_id %in% trains_that_must_have_arrived) & (location_data$body.event_type == 'DEPARTURE'), ]
+                dummy_arrivals$body.event_type <- 'ARRIVAL'
+                location_data <<- rbind(location_data, dummy_arrivals)                    
+            }
         }
+        return(location_data)
     }
-    return(location_data)
 }
 
 integrate_with_missing_arrivals <- memoise(integrate_with_missing_arrivals_not_memoised)
