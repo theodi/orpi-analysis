@@ -219,7 +219,7 @@ generate_all_segments_not_memoised <- function (day_data) {
 generate_all_segments <- memoise(generate_all_segments_not_memoised)
 
 calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NULL) {
-    if (is.null(from) | is.null(to)) {
+    if (is.null(from) || is.null(to)) {
     
         # LOTS OF CODE GOES HERE
         
