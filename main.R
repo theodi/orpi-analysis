@@ -9,7 +9,7 @@ library(RCurl)
 library(rjson)
 
 AWS_BUCKET_NAME <- "orpi-nrod-store"
-CORPUS_DOWNLOAD_URL <- "https://raw.githubusercontent.com/theodi/orpi-corpus/master/corpus.csv"
+CORPUS_DOWNLOAD_URL <- "https://raw.githubusercontent.com/theodi/orpi-corpus/master/data/corpus.csv"
 RIGHT_TIME <- 1
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
