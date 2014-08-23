@@ -110,8 +110,8 @@ download_data <- memoise(function (target_date = (Sys.Date() - 1), EXTRA_HOURS =
     
     # drop the columns I do not need
     results <- results[, names(results) %in% c("body.train_id", 
-                                               "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
-                                               "body.gbtt_timestamp", "body.timetable_variation")]
+        "body.actual_timestamp", "body.event_type", "body.loc_stanox",
+        "body.gbtt_timestamp", "body.timetable_variation")]
     
     # sort by train and expected timestamp for the events
     results <- results[with(results, order(body.train_id, body.gbtt_timestamp)), ]    
