@@ -1,6 +1,5 @@
 library(dplyr)
 library(memoise)
-library(RCurl)
 library(rjson)
 
 RIGHT_TIME <- 1
@@ -8,15 +7,11 @@ MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 
 source('./download-from-S3.R')
+source('./download-corpus.R')
 
 # let's see integer numerics as such!
 options(digits=12)
 
-download_corpus <- memoise(function (CORPUS_DOWNLOAD_URL = "https://raw.githubusercontent.com/theodi/orpi-corpus/master/data/corpus.csv") {
-    corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
-    corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
-    return(corpus)
-})
 
 # Not all location data shows the arrival of trains at intermediate stations
 # in a journey, typically when the timetable sets identical arrival and 
