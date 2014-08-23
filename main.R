@@ -17,6 +17,14 @@ HEAVY_DELAY <- 30
 # let's see integer numerics as such!
 options(digits=12)
 
+download_corpus_not_memoised <- function () {
+    corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
+    corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
+    return(corpus)
+}
+
+download_corpus <- memoise(download_corpus_not_memoised)
+
 # download_data creates a data.frame of all events for train journeys that 
 # run on the specified date, including the events for those same trains up to
 # ~EXTRA_HOURS hours in the previous day and ~EXTRA_HOURS hours in the 
@@ -265,8 +273,7 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 
 make_geojson <- function (reporting_points_ranking, filename) {
     # load the latest version of the corpus and drop the nodes that have no geographic coordinates
-    corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
-    corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
+    corpus <- download_corpus()
     names(corpus) <- c("crs", "stanox", "lat", "lon", "description")
     # join with the reporting points ranking data
     reporting_points_ranking <- left_join(reporting_points_ranking, corpus, by = "stanox")
