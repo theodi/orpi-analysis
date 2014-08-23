@@ -34,6 +34,9 @@ download_corpus <- memoise(download_corpus_not_memoised)
 # the MD5 of multipart uploads
 download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
 
+    # downloads the reference corpus to get the list of stations that is relevant
+    corpus <- download_corpus() 
+    
     # Returns the list of all available files that could include events
     # that took place in the specified target date and within the specified
     # hours; hourEnd is *included* in the results
@@ -75,6 +78,9 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
         # makes non-NA values to POSIXct
         results[, timestamp_column_name] <<- as.POSIXct(results[, timestamp_column_name], origin = '1970-01-01')
     })
+    
+    # drop rows that do not belong to relevant stations
+    results <- results[results$body.loc_stanox %in% corpus$stanox, ]
     
     # drop rows that have NA for body.planned_timestamp
     results <- results[!is.na(results$body.planned_timestamp), ]
