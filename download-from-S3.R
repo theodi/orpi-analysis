@@ -13,7 +13,7 @@ library(memoise)
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads
-download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3, AWS_BUCKET_NAME = "orpi-nrod-store") {
+download_data <- memoise(function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3, AWS_BUCKET_NAME = "orpi-nrod-store") {
     
     # downloads the reference corpus to get the list of stations that is relevant
     corpus <- download_corpus() 
@@ -64,33 +64,33 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     results <- results[results$body.loc_stanox %in% corpus$stanox, ]
     
     # drop rows that have NA for body.planned_timestamp
-    latest_row_count <- nrows(results)
+    latest_row_count <- nrow(results)
     results <- results[!is.na(results$body.planned_timestamp), ]
-    change_row_count <- latest_row_count - nrows(results)
+    change_row_count <- latest_row_count - nrow(results)
     cat(paste0("Dropping rows that have NA for body.planned_timestamp: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
     
     # copy body.planned_timestamp to body.gbtt_timestamp where the latter is 
     # undefined; note that if I don't specify as.POSIXct the date is converted
     # back to an epoch-style timestamp
-    latest_row_count <- nrows(results)
+    latest_row_count <- nrow(results)
     change_row_count <- sum(is.na(results$body.gbtt_timestamp))
     cat(paste0("Copying body.planned_timestamp to body.gbtt_timestamp where the latter is undefined: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
     results$body.gbtt_timestamp <- as.POSIXct(ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp), origin = '1970-01-01')
     
     # the value of body.current_train_id can be either of "", NA or "null" to
     # represent that the train has not changed id
-    latest_row_count <- nrows(results)
+    latest_row_count <- nrow(results)
     results$body.current_train_id <- ifelse(results$body.current_train_id %in% c("", "null"), NA, results$body.current_train_id)
-    change_row_count <- latest_row_count - nrows(results)
+    change_row_count <- latest_row_count - nrow(results)
     cat(paste0("Dropping trains that have changed id: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
     
     # identify trains that changed *any* of their planned locations (e.g. 
     # stations they stop at) and drop their entire journeys (e.g. there were 7 
     # out of 473162 on 13/8/2014)
-    latest_row_count <- nrows(results)
+    latest_row_count <- nrow(results)
     changed_location_trains <- unique(results[!is.na(results$body.original_loc_stanox), ]$body.train_id)
     results <- results[!(results$body.train_id %in% changed_location_trains), ]
-    change_row_count <- latest_row_count - nrows(results)
+    change_row_count <- latest_row_count - nrow(results)
     cat(paste0("Dropping trains that have changed any of their planned stops: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
     
     # identify all train ids for events that happened in the target day
@@ -117,6 +117,4 @@ download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HO
     results <- results[with(results, order(body.train_id, body.gbtt_timestamp)), ]    
     
     return(results)
-}
-
-download_data <- memoise(download_data_not_memoised)
+})

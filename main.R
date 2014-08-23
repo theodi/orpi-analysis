@@ -12,13 +12,11 @@ source('./download-from-S3.R')
 # let's see integer numerics as such!
 options(digits=12)
 
-download_corpus_not_memoised <- function (CORPUS_DOWNLOAD_URL = "https://raw.githubusercontent.com/theodi/orpi-corpus/master/data/corpus.csv") {
+download_corpus <- memoise(function (CORPUS_DOWNLOAD_URL = "https://raw.githubusercontent.com/theodi/orpi-corpus/master/data/corpus.csv") {
     corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
     return(corpus)
-}
-
-download_corpus <- memoise(download_corpus_not_memoised)
+})
 
 # Not all location data shows the arrival of trains at intermediate stations
 # in a journey, typically when the timetable sets identical arrival and 
@@ -26,7 +24,7 @@ download_corpus <- memoise(download_corpus_not_memoised)
 # This function integrates the data for the specified stanox or list of stanox
 # with all the missing arrivals, inferred from the existence of previous
 # events in the life of the train, and returns that stanox data only.
-integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
+integrate_with_missing_arrivals <- memoise(function (day_data, stanox) {
     if (is.vector(stanox) && (length(stanox) > 1)) {
         return(unique(do.call(rbind, lapply(stanox, function (stanox) integrate_with_missing_arrivals(day_data, stanox)))))
     } else {
@@ -54,15 +52,13 @@ integrate_with_missing_arrivals_not_memoised <- function (day_data, stanox) {
         }
         return(location_data)
     }
-}
-
-integrate_with_missing_arrivals <- memoise(integrate_with_missing_arrivals_not_memoised)
+})
 
 # If the 'stanox' parameter is specified (single stanox or vector of stanox codes), 
 # this function calculates the average delay for all trains arriving to or 
 # departing from that station as recorded in 'day_data'. Otherwise, it returns a 
 # data.frame with all average delays for each stanox listed in 'clean_day_data'.
-calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
+calculate_station_rank <- memoise(function (day_data, stanox = NULL) {
     if (is.null(stanox)) {
         # if stanox is not specified, do the job for all stations
         return(calculate_station_rank(day_data, sort(unique(day_data$body.loc_stanox))))
@@ -90,16 +86,14 @@ calculate_station_rank_not_memoised <- function (day_data, stanox = NULL) {
             average_delay = c(ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0))
         ))
     }
-}
-
-calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
+})
 
 # This functions generates a list of c(from = [stanox1], to = [stanox2]) 
 # representing all segments connecting two stations by at least one train that 
 # does not stop at any intermediate station. The direction of the train is not
 # relevant and the segment is represented by the two stanox codes in 
 # alphabetical order.
-generate_all_segments_not_memoised <- function (day_data) {
+generate_all_segments <- memoise(function (day_data) {
     # drop the trains that stop at one station only
     trains_with_one_station_only <- unique(day_data %.%
        group_by(body.train_id) %.%
@@ -119,11 +113,9 @@ generate_all_segments_not_memoised <- function (day_data) {
         })))    
     }))        
     return(unique(segments))
-}
+})
 
-generate_all_segments <- memoise(generate_all_segments_not_memoised)
-
-calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NULL) {
+calculate_segment_rank <- memoise(function (day_data, from = NULL, to = NULL) {
     if (is.null(from) || is.null(to)) {
         segments <- generate_all_segments(day_data)
         return(do.call(rbind, lapply(lapply(split(segments, seq_along(segments[, 1])), as.list), function (segment) calculate_segment_rank(day_data, segment$from, segment$to))))
@@ -155,9 +147,7 @@ calculate_segment_rank_not_memoised <- function (day_data, from = NULL, to = NUL
             average_delay = c(ifelse(nrow(delayed_trains) > 0, mean(delayed_trains$body.timetable_variation), 0))
         ))
     }
-} 
-
-calculate_segment_rank <- memoise(calculate_segment_rank_not_memoised)
+}) 
 
 #### UBER ORPI
 # a) weighted mean of the average delay at all stations vs the number of trains stopping at that station
