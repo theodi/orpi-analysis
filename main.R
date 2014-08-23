@@ -280,19 +280,19 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 make_geojson <- function (reporting_points_ranking, filename) {
     # load the latest version of the corpus and drop the nodes that have no geographic coordinates
     corpus <- download_corpus()
-    names(corpus) <- c("crs", "stanox", "lat", "lon", "description")
+    names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     # join with the reporting points ranking data
     reporting_points_ranking <- left_join(reporting_points_ranking, corpus, by = "stanox")
     # GIANFRANCO: let's include matching diagnostics if it makes sense here.
     # drop the reporting points that don't have latlong
-    reporting_points_ranking <- reporting_points_ranking[!(is.na(reporting_points_ranking$lat) | is.na(reporting_points_ranking$lon)), ]
+    reporting_points_ranking <- reporting_points_ranking[!(is.na(reporting_points_ranking$LAT) | is.na(reporting_points_ranking$LON)), ]
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
         features = sapply(lapply(split(reporting_points_ranking, seq_along(reporting_points_ranking[, 1])), as.list), function (rp) {
             return(list(
                 type = "Feature",
-                geometry = list(type = "Point", coordinates = c(rp$lon, rp$lat)),
+                geometry = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                 properties = list(
                     "title" = rp$description,
                     "description" = paste0("This is the description for ", rp$description),
