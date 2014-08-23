@@ -12,7 +12,6 @@ source('./download-corpus.R')
 # let's see integer numerics as such!
 options(digits=12)
 
-
 # Not all location data shows the arrival of trains at intermediate stations
 # in a journey, typically when the timetable sets identical arrival and 
 # re-departure times. 
@@ -153,19 +152,18 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 
 # early mapping
 
-make_geojson <- function (reporting_points_ranking, filename) {
-    # load the latest version of the corpus and drop the nodes that have no geographic coordinates
+make_geojson <- function (stations_ranking, segments_ranking, filename) {
+    # load the latest version of the corpus
     corpus <- download_corpus()
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     # join with the reporting points ranking data
-    reporting_points_ranking <- left_join(reporting_points_ranking, corpus, by = "stanox")
-    # GIANFRANCO: let's include matching diagnostics if it makes sense here.
+    stations_ranking <- left_join(stations_ranking, corpus, by = "stanox")
     # drop the reporting points that don't have latlong
-    reporting_points_ranking <- reporting_points_ranking[!(is.na(reporting_points_ranking$LAT) | is.na(reporting_points_ranking$LON)), ]
+    stations_ranking <- stations_ranking[!(is.na(stations_ranking$LAT) | is.na(stations_ranking$LON)), ]
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        features = sapply(lapply(split(reporting_points_ranking, seq_along(reporting_points_ranking[, 1])), as.list), function (rp) {
+        features = sapply(lapply(split(stations_ranking, seq_along(stations_ranking[, 1])), as.list), function (rp) {
             return(list(
                 type = "Feature",
                 geometry = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
