@@ -90,9 +90,9 @@ calculate_station_rank <- memoise(function (day_data, stanox = NULL) {
 generate_all_segments <- memoise(function (day_data) {
     # drop the trains that stop at one station only
     trains_with_one_station_only <- unique(day_data %.%
-       group_by(body.train_id) %.%
-       summarise(no_of_stations = length(unique(body.loc_stanox))) %.%
-       filter(no_of_stations < 2))
+        group_by(body.train_id) %.%
+        summarise(no_of_stations = length(unique(body.loc_stanox))) %.%
+        filter(no_of_stations < 2))
     day_data <- day_data[!(day_data$body.train_id %in% trains_with_one_station_only$body.train_id), ]
     # the sorting below is instrumental
     day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
