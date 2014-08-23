@@ -1,139 +1,24 @@
-# Pre-requisites:
-# - the 's3cmd' open source tool, available at http://s3tools.org/s3cmd ; s3cmd 
-#   must be configured with your AWS credentials before being called from this
-#   script
-
 library(dplyr)
 library(memoise)
 library(RCurl)
 library(rjson)
 
-AWS_BUCKET_NAME <- "orpi-nrod-store"
-CORPUS_DOWNLOAD_URL <- "https://raw.githubusercontent.com/theodi/orpi-corpus/master/data/corpus.csv"
 RIGHT_TIME <- 1
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 
+source('./download-from-S3.R')
+
 # let's see integer numerics as such!
 options(digits=12)
 
-download_corpus_not_memoised <- function () {
+download_corpus_not_memoised <- function (CORPUS_DOWNLOAD_URL = "https://raw.githubusercontent.com/theodi/orpi-corpus/master/data/corpus.csv") {
     corpus <- read.csv(text = getURL(CORPUS_DOWNLOAD_URL))
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), c("X3ALPHA", "STANOX", "LAT", "LON", "NLCDESC")]
     return(corpus)
 }
 
 download_corpus <- memoise(download_corpus_not_memoised)
-
-# download_data creates a data.frame of all events for train journeys that 
-# run on the specified date, including the events for those same trains up to
-# ~EXTRA_HOURS hours in the previous day and ~EXTRA_HOURS hours in the 
-# following day.
-# Note that a series of "MD5 signatures do not match" warnings will be 
-# generated to stderr: this is caused by s3cmd not managing correctly
-# the MD5 of multipart uploads
-download_data_not_memoised <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3) {
-
-    # downloads the reference corpus to get the list of stations that is relevant
-    corpus <- download_corpus() 
-    
-    # Returns the list of all available files that could include events
-    # that took place in the specified target date and within the specified
-    # hours; hourEnd is *included* in the results
-    get_files_list <- function (target_date, hourStart = 0, hourEnd = 23) {
-        # gets the files list from S3
-        path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), "/")
-        s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
-        available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")
-        available_files <- available_files[, ncol(available_files)]  
-        # if specified, filters out the hours outside of the specified interval
-        grep_regexpr <- paste0("^", path, "arrivals_", formatC(format(target_date, "%Y"), width=4, flag="0"), formatC(format(target_date, "%m"), width=2, flag="0"), formatC(format(target_date, "%d"), width=2, flag="0"), "(", paste(formatC(seq(hourStart, hourEnd), width=2, flag="0"), collapse="|"), ")")
-        available_files <- grep(grep_regexpr, available_files, value = TRUE)        
-        # returns the list in chronological order        
-        sort(available_files)
-    }
-    
-    # create the list of files that I need to read
-    target_date <- as.Date(target_date)
-    yesterday <- as.Date(target_date - 1)
-    tomorrow <- as.Date(target_date + 1) 
-    files_list <- c(
-        get_files_list(yesterday, 23 - (EXTRA_HOURS - 1), 23), 
-        get_files_list(target_date), 
-        get_files_list(tomorrow, 0, EXTRA_HOURS - 1)
-    )
-    
-    # read them
-    results <- data.frame();
-    sapply(files_list, function (filename) {
-        print(paste0("Reading ", filename, "..."));
-        results <<- rbind(results, read.csv(pipe(paste0("/usr/local/bin/s3cmd get ", filename, " -")), header = TRUE, stringsAsFactors = FALSE))
-    });
-
-    # convert timestamps to POSIXct
-    timestamp_column_names <- grep("_timestamp$", names(results), value = TRUE)    
-    sapply(timestamp_column_names, function (timestamp_column_name) {
-        # make empty values into NAs
-        results[, timestamp_column_name] <<- ifelse(results[, timestamp_column_name] == "", NA, results[, timestamp_column_name])  
-        # makes non-NA values to POSIXct
-        results[, timestamp_column_name] <<- as.POSIXct(results[, timestamp_column_name], origin = '1970-01-01')
-    })
-    
-    # drop rows that do not belong to relevant stations
-    results <- results[results$body.loc_stanox %in% corpus$stanox, ]
-    
-    # drop rows that have NA for body.planned_timestamp
-    results <- results[!is.na(results$body.planned_timestamp), ]
-    
-    # copy body.planned_timestamp to body.gbtt_timestamp where the latter is 
-    # undefined; note that if I don't specify as.POSIXct the date is converted
-    # back to an epoch-style timestamp
-    results$body.gbtt_timestamp <- as.POSIXct(ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp), origin = '1970-01-01')
-
-    # the value of body.current_train_id can be either of "", NA or "null" to
-    # represent that the train has not changed id
-    results$body.current_train_id <- ifelse(results$body.current_train_id %in% c("", "null"), NA, results$body.current_train_id)
-    
-    # identify all train ids for events that happened in the target day
-    min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
-    max_possible_date_not_included <- as.POSIXct(paste0(formatC(format(tomorrow, "%Y"), width=4, flag="0"), "/", formatC(format(tomorrow, "%m"), width=2, flag="0"), "/", formatC(format(tomorrow, "%d"), width=2, flag="0"), " 00:00"))
-    train_ids_in_scope <- results[(results$body.actual_timestamp >= rep(min_possible_date, nrow(results))) & (results$body.actual_timestamp < rep(max_possible_date_not_included, nrow(results))), ]$body.train_id
-    # filter out the trains that don't belong to the list above
-    results <- results[results$body.train_id %in% train_ids_in_scope, ]
-    
-    # make $body.timetable_variation sign-aware
-    results$body.timetable_variation <- ifelse(results$body.variation_status == "EARLY", -1 * results$body.timetable_variation, results$body.timetable_variation)
-
-    # drop the trains that changed id (e.g. there were none on 13/8/2014)
-    changed_id_trains <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
-    results <- results[!(results$body.train_id %in% changed_id_trains), ]
-
-    # identify trains that changed *any* of their planned locations (e.g. 
-    # stations they stop at) and drop their entire journeys (e.g. there were 7 
-    # out of 473162 on 13/8/2014)
-    changed_location_trains <- unique(results[!is.na(results$body.original_loc_stanox), ]$body.train_id)
-    results <- results[!(results$body.train_id %in% changed_location_trains), ]
-
-    # drop the trains that stop at one station only (???, e.g. on 16/8/2014
-    # there were 80 out of 19816)
-    trains_with_one_station_only <- unique(results %.%
-        group_by(body.train_id) %.%
-        summarise(no_of_stations = length(unique(body.loc_stanox))) %.%
-        filter(no_of_stations < 2))
-    results <- results[!(results$body.train_id %in% trains_with_one_station_only$body.train_id), ]
-    
-    # drop the columns I do not need
-    results <- results[, names(results) %in% c("body.train_id", 
-      "body.actual_timestamp", "body.event_type", "body.loc_stanox", 
-      "body.gbtt_timestamp", "body.timetable_variation")]
-    
-    # sort by train and expected timestamp for the events
-    results <- results[with(results, order(body.train_id, body.gbtt_timestamp)), ]    
-    
-    return(results)
-}
-
-download_data <- memoise(download_data_not_memoised)
 
 # Not all location data shows the arrival of trains at intermediate stations
 # in a journey, typically when the timetable sets identical arrival and 
@@ -215,6 +100,12 @@ calculate_station_rank <- memoise(calculate_station_rank_not_memoised)
 # relevant and the segment is represented by the two stanox codes in 
 # alphabetical order.
 generate_all_segments_not_memoised <- function (day_data) {
+    # drop the trains that stop at one station only
+    trains_with_one_station_only <- unique(day_data %.%
+       group_by(body.train_id) %.%
+       summarise(no_of_stations = length(unique(body.loc_stanox))) %.%
+       filter(no_of_stations < 2))
+    day_data <- day_data[!(day_data$body.train_id %in% trains_with_one_station_only$body.train_id), ]
     # the sorting below is instrumental
     day_data <- day_data[with(day_data, order(body.train_id, body.gbtt_timestamp)), c("body.train_id", "body.loc_stanox")]
     segments <- do.call(rbind, lapply(unique(day_data$body.train_id), function (train_id) {
