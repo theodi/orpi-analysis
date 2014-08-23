@@ -6,6 +6,8 @@
 library(scales)
 library(memoise)
 
+source('./download-corpus.R')
+
 # download_data creates a data.frame of all events for train journeys that 
 # run on the specified date, including the events for those same trains up to
 # ~EXTRA_HOURS hours in the previous day and ~EXTRA_HOURS hours in the 
@@ -50,48 +52,55 @@ download_data <- memoise(function (target_date = (Sys.Date() - 1), EXTRA_HOURS =
         cat(paste0("Reading ", filename, "...\n"));
         results <<- rbind(results, read.csv(pipe(paste0("/usr/local/bin/s3cmd get ", filename, " -")), header = TRUE, stringsAsFactors = FALSE))
     });
+
+    # drop rows that do not belong to relevant stations
+    latest_stations_count <- length(unique(results$body.loc_stanox))
+    results <- results[results$body.loc_stanox %in% corpus$STANOX, ]
+    change_stations_count <- latest_stations_count - length(unique(results$body.loc_stanox))
+    cat(paste0("Dropping locations not referenced in the corpus: ", ifelse(change_stations_count > 0, paste0(change_stations_count, ", ", percent(change_stations_count / latest_stations_count), " of total."), "none."), "\n"))
     
     # convert timestamps to POSIXct
     timestamp_column_names <- grep("_timestamp$", names(results), value = TRUE)    
-    sapply(timestamp_column_names, function (timestamp_column_name) {
+    for (timestamp_column_name in timestamp_column_names) {
         # make empty values into NAs
-        results[, timestamp_column_name] <<- ifelse(results[, timestamp_column_name] == "", NA, results[, timestamp_column_name])  
+        results[, timestamp_column_name] <- ifelse(results[, timestamp_column_name] == "", NA, results[, timestamp_column_name])  
         # makes non-NA values to POSIXct
-        results[, timestamp_column_name] <<- as.POSIXct(results[, timestamp_column_name], origin = '1970-01-01')
-    })
-    
-    # drop rows that do not belong to relevant stations
-    results <- results[results$body.loc_stanox %in% corpus$stanox, ]
+        results[, timestamp_column_name] <- as.POSIXct(results[, timestamp_column_name], origin = '1970-01-01')
+    }
     
     # drop rows that have NA for body.planned_timestamp
     latest_row_count <- nrow(results)
     results <- results[!is.na(results$body.planned_timestamp), ]
     change_row_count <- latest_row_count - nrow(results)
-    cat(paste0("Dropping rows that have NA for body.planned_timestamp: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
+    cat(paste0("Dropping rows that have NA for body.planned_timestamp: ", ifelse(change_row_count > 0, paste0(change_row_count, ", ", percent(change_row_count / latest_row_count), " of total."), "none."), "\n"))
     
     # copy body.planned_timestamp to body.gbtt_timestamp where the latter is 
     # undefined; note that if I don't specify as.POSIXct the date is converted
     # back to an epoch-style timestamp
     latest_row_count <- nrow(results)
     change_row_count <- sum(is.na(results$body.gbtt_timestamp))
-    cat(paste0("Copying body.planned_timestamp to body.gbtt_timestamp where the latter is undefined: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
+    cat(paste0("Copying body.planned_timestamp to body.gbtt_timestamp where the latter is undefined: ", ifelse(change_row_count > 0, paste0(change_row_count, ", ", percent(change_row_count / latest_row_count), " of total."), "none."), "\n"))
     results$body.gbtt_timestamp <- as.POSIXct(ifelse(is.na(results$body.gbtt_timestamp), results$body.planned_timestamp, results$body.gbtt_timestamp), origin = '1970-01-01')
     
     # the value of body.current_train_id can be either of "", NA or "null" to
-    # represent that the train has not changed id
-    latest_row_count <- nrow(results)
+    # represent that the train has not changed id; I change them all to NA
     results$body.current_train_id <- ifelse(results$body.current_train_id %in% c("", "null"), NA, results$body.current_train_id)
-    change_row_count <- latest_row_count - nrow(results)
-    cat(paste0("Dropping trains that have changed id: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
+
+    # drop the trains that changed id (e.g. there were none on 13/8/2014)
+    latest_train_count <- length(unique(results$body.train_id))
+    changed_id_trains <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
+    results <- results[!(results$body.train_id %in% changed_id_trains), ]
+    changed_train_count <- latest_train_count - length(unique(results$body.train_id))
+    cat(paste0("Dropping trains that changed id: ", ifelse(changed_train_count > 0, paste0(changed_train_count, ", ", percent(changed_train_count / latest_train_count), " of total."), "none."), "\n"))
     
     # identify trains that changed *any* of their planned locations (e.g. 
     # stations they stop at) and drop their entire journeys (e.g. there were 7 
     # out of 473162 on 13/8/2014)
-    latest_row_count <- nrow(results)
-    changed_location_trains <- unique(results[!is.na(results$body.original_loc_stanox), ]$body.train_id)
+    latest_train_count <- length(unique(results$body.train_id))
+    changed_location_trains <- unique(results[results$body.original_loc_stanox %in% corpus$STANOX, ]$body.train_id)
     results <- results[!(results$body.train_id %in% changed_location_trains), ]
-    change_row_count <- latest_row_count - nrow(results)
-    cat(paste0("Dropping trains that have changed any of their planned stops: ", change_row_count, ", ", percent(change_row_count / latest_row_count), " of total.\n"))
+    changed_train_count <- latest_train_count - length(unique(results$body.train_id))
+    cat(paste0("Dropping trains that have changed any of their planned stops: ", ifelse(changed_train_count > 0, paste0(changed_train_count, ", ", percent(changed_train_count / latest_train_count), " of total."), "none."), "\n"))
     
     # identify all train ids for events that happened in the target day
     min_possible_date <- as.POSIXct(paste0(formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), " 00:00"))
@@ -102,11 +111,6 @@ download_data <- memoise(function (target_date = (Sys.Date() - 1), EXTRA_HOURS =
     
     # make $body.timetable_variation sign-aware
     results$body.timetable_variation <- ifelse(results$body.variation_status == "EARLY", -1 * results$body.timetable_variation, results$body.timetable_variation)
-    
-    # TODO is this a duplicate?
-    # drop the trains that changed id (e.g. there were none on 13/8/2014)
-    # changed_id_trains <- unique(results[!is.na(results$body.current_train_id),]$body.train_id)
-    # results <- results[!(results$body.train_id %in% changed_id_trains), ]
     
     # drop the columns I do not need
     results <- results[, names(results) %in% c("body.train_id", 
