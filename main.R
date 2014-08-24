@@ -183,12 +183,11 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                 return(list(
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
-                    'properties' = list(
-                        "Station name" = rp$Station.Name,
-                        "description" = paste0("This is the description for ", rp$Station.Name),
+                    'properties' = do.call(c, list(
+                        unlist(rp),
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
-                    )
+                    ))
                 ))              
             })),
             # the segments
@@ -196,12 +195,12 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                 return(list(
                     'type' = "Feature",
                     'geometry' = list(type = "LineString", coordinates = list(c(segment$from_lon, segment$from_lat), c(segment$to_lon, segment$to_lat))),
-                    properties = list(
-                        "title" = paste0(segment$from_stanox, '_', segment$to_stanox),
+                    properties = do.call(c, list(
+                        unlist(segment),
                         "stroke" = substring(col2hcl("red", alpha = 0.1 + 0.9 * (segment$average_delay - min_segment_delay) / (max_segment_delay - min_segment_delay)), 1, 7),
                         "stroke-opacity" = 1.0,
                         "stroke-width" = 2.0
-                    )
+                    ))
                 ))              
             }))
         )
