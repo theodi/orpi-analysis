@@ -174,9 +174,9 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     names(segments_ranking)[names(segments_ranking) == 'LON'] <- 'to_lon'
     max_segment_delay <- max(segments_ranking$average_delay)
     # create the JSON
-    json_structure <- list(
-        type = "FeatureCollection",
-        features = list(
+    json_structure <- c(
+        "type" = "FeatureCollection",
+        "features" = list(
             # the stations
             unname(lapply(lapply(split(stations_ranking, seq_along(stations_ranking[, 1])), as.list), function (rp) {
                 return(c(
