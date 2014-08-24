@@ -159,10 +159,16 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), ]
     stations_ranking <- stations_ranking[stations_ranking$stanox %in% corpus$STANOX, ]
     segments_ranking <- segments_ranking[(segments_ranking$from_stanox %in% corpus$STANOX) & (segments_ranking$to_stanox %in% corpus$STANOX), ]
+
     # enhancing the station ranking data with the lat lon
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     stations_ranking <- left_join(stations_ranking, corpus, by = "stanox")
+    perc_column_names <- grep("^perc_", names(stations_ranking), value = TRUE)
+    for (perc_column_name in perc_column_names) {
+        stations_ranking[, perc_column_name] <- ifelse(stations_ranking[, perc_column_name] > 0, percent(stations_ranking[, perc_column_name]), "0%")
+    }
+    
     # enhancing the segment ranking data with the lat lon
     names(corpus)[names(corpus) == 'stanox'] <- 'from_stanox'
     segments_ranking <- left_join(segments_ranking, corpus, by = "from_stanox")
@@ -174,6 +180,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     names(segments_ranking)[names(segments_ranking) == 'LON'] <- 'to_lon'
     min_segment_delay <- min(segments_ranking$average_delay)
     max_segment_delay <- max(segments_ranking$average_delay)
+    
     # create the JSON
     json_structure <- list(
         "type" = "FeatureCollection",
