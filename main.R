@@ -190,8 +190,8 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # to support the segments colouring
     min_segment_delay <- min(segments_ranking$average_delay)
     max_segment_delay <- max(segments_ranking$average_delay)
-    min_alpha <- 10
-    exp_base <- (100 - min_alpha) ^ (1 / (max_segment_delay - min_segment_delay))
+    min_opacity <- 20
+    exp_base <- (100 - min_opacity) ^ (1 / (max_segment_delay - min_segment_delay))
     
     # create the JSON
     json_structure <- list(
@@ -218,7 +218,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                         segment[!(names(segment) %in% c('from_stanox', 'to_stanox', 'from_lat', 'from_lon', 'to_lat', 'to_lon'))],
                         "stroke" = "#FF0000",
                         "stroke-opacity" = round((min_alpha + exp_base ^ (segment$average_delay - min_segment_delay)) / 100, 2),
-                        "stroke-width" = 2.0
+                        "stroke-width" = 3.0
                     ))
                 ))              
             }))
