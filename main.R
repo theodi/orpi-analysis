@@ -191,7 +191,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     min_segment_delay <- min(segments_ranking$average_delay)
     max_segment_delay <- max(segments_ranking$average_delay)
     min_alpha <- 10
-    exp_base <- (100 - min_alpha) ^ (max_segment_delay - min_segment_delay)
+    exp_base <- (100 - min_alpha) ^ (1 / (max_segment_delay - min_segment_delay))
     
     # create the JSON
     json_structure <- list(
@@ -216,7 +216,8 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'geometry' = list(type = "LineString", coordinates = list(c(segment$from_lon, segment$from_lat), c(segment$to_lon, segment$to_lat))),
                     properties = do.call(c, list(
                         segment[!(names(segment) %in% c('from_stanox', 'to_stanox', 'from_lat', 'from_lon', 'to_lat', 'to_lon'))],
-                        "stroke" = substring(col2hcl("red", alpha = (min_alpha + exp_base ^ (segment$average_delay - max_segment_delay)) / 100), 1, 7),
+                        "alpha" = (min_alpha + exp_base ^ (segment$average_delay - min_segment_delay)) / 100,
+                        "stroke" = substring(col2hcl("red", alpha = round((min_alpha + exp_base ^ (segment$average_delay - min_segment_delay)) / 100, 1)), 1, 7),
                         "stroke-opacity" = 1.0,
                         "stroke-width" = 2.0
                     ))
