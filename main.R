@@ -155,6 +155,7 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 make_geojson <- function (stations_ranking, segments_ranking, filename) {
     # load the latest version of the corpus
     corpus <- download_corpus()
+    # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     # join with the reporting points ranking data
     stations_ranking <- left_join(stations_ranking, corpus, by = "stanox")
