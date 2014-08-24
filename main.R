@@ -154,7 +154,11 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 
 make_geojson <- function (stations_ranking, segments_ranking, filename) {
     # load the latest version of the corpus
-    corpus <- download_corpus()
+    corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON')]
+    # drop the stations that have no coordinates: note that because the output
+    # of this function is used as reference for all existing stations, the data
+    # regarding those stations will be remove from all analysis calculations
+    corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), ]
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     # join with the reporting points ranking data
