@@ -103,23 +103,23 @@ generate_all_segments <- memoise(function (day_data) {
             # for each station, create one segment between each consecutive
             # station
             segment <- sort(c(stations[i], stations[i+1]))
-            return(data.frame(from = c(segment[1]), to = c(segment[2])))
+            return(data.frame(from_stanox = c(segment[1]), to_stanox = c(segment[2])))
         })))    
     }))        
     return(unique(segments))
 })
 
-calculate_segment_rank <- memoise(function (day_data, from = NULL, to = NULL) {
-    if (is.null(from) || is.null(to)) {
+calculate_segment_rank <- memoise(function (day_data, from_stanox = NULL, to_stanox = NULL) {
+    if (is.null(from_stanox) || is.null(to_stanox)) {
         segments <- generate_all_segments(day_data)
-        return(do.call(rbind, lapply(lapply(split(segments, seq_along(segments[, 1])), as.list), function (segment) calculate_segment_rank(day_data, segment$from, segment$to))))
+        return(do.call(rbind, lapply(lapply(split(segments, seq_along(segments[, 1])), as.list), function (segment) calculate_segment_rank(day_data, segment$from_stanox, segment$to_stanox))))
     } else {
-        if (from > to) { temp <- from; from <- to; to <- temp }
+        if (from_stanox > to_stanox) { temp <- from_stanox; from_stanox <- to_stanox; to_stanox <- temp }
         segment_trains <- intersect(
-            unique(day_data[day_data$body.loc_stanox == from, ]$body.train_id),
-            unique(day_data[day_data$body.loc_stanox == to, ]$body.train_id)
+            unique(day_data[day_data$body.loc_stanox == from_stanox, ]$body.train_id),
+            unique(day_data[day_data$body.loc_stanox == to_stanox, ]$body.train_id)
         )
-        segment_data <- integrate_with_missing_arrivals(day_data, c(from, to))
+        segment_data <- integrate_with_missing_arrivals(day_data, c(from_stanox, to_stanox))
         segment_data <- segment_data[segment_data$body.train_id %in% segment_trains, ]
         no_of_trains <- length(unique(segment_data$body.train_id))
         right_time_trains <- segment_data[segment_data$body.timetable_variation <= RIGHT_TIME, ]
@@ -129,8 +129,8 @@ calculate_segment_rank <- memoise(function (day_data, from = NULL, to = NULL) {
         heavily_delayed_trains <- delayed_trains[delayed_trains$body.timetable_variation >= HEAVY_DELAY, ]
         no_of_heavily_delayed_trains <- length(unique(heavily_delayed_trains$body.train_id))
         return(data.frame(
-            from = c(from),
-            to = c(to),
+            from_stanox = c(from_stanox),
+            to_stanox = c(to_stanox),
             no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
             perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
@@ -155,10 +155,10 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 make_geojson <- function (stations_ranking, segments_ranking, filename) {
     # load the latest version of the corpus
     corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON')]
-    # drop the stations that have no coordinates: note that because the output
-    # of this function is used as reference for all existing stations, the data
-    # regarding those stations will be remove from all analysis calculations
+    # drop the stations that have no coordinates
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), ]
+    stations_ranking <- stations_ranking[stations_ranking$stanox %in% corpus$STANOX, ]
+    segments_ranking <- segments_ranking[(segments_ranking$from %in% corpus$STANOX) & (segments_ranking$to %in% corpus$STANOX), ]
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     # join with the reporting points ranking data
