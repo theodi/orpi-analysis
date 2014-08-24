@@ -152,37 +152,62 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 
 # early mapping
 
-make_geojson <- function (stations_ranking, segments_ranking, filename) {
+make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # load the latest version of the corpus
-    corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON')]
+    corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON', 'Station.Name')]
     # drop the stations that have no coordinates
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), ]
     stations_ranking <- stations_ranking[stations_ranking$stanox %in% corpus$STANOX, ]
-    segments_ranking <- segments_ranking[(segments_ranking$from %in% corpus$STANOX) & (segments_ranking$to %in% corpus$STANOX), ]
+    segments_ranking <- segments_ranking[(segments_ranking$from_stanox %in% corpus$STANOX) & (segments_ranking$to_stanox %in% corpus$STANOX), ]
+    # enhancing the station ranking data with the lat lon
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
-    # join with the reporting points ranking data
     stations_ranking <- left_join(stations_ranking, corpus, by = "stanox")
-    # drop the reporting points that don't have latlong
-    stations_ranking <- stations_ranking[!(is.na(stations_ranking$LAT) | is.na(stations_ranking$LON)), ]
+    # enhancing the segment ranking data with the lat lon
+    names(corpus)[names(corpus) == 'stanox'] <- 'from_stanox'
+    segments_ranking <- left_join(segments_ranking, corpus, by = "from_stanox")
+    names(segments_ranking)[names(segments_ranking) == 'LAT'] <- 'from_lat'
+    names(segments_ranking)[names(segments_ranking) == 'LON'] <- 'from_lon'
+    names(corpus)[names(corpus) == 'from_stanox'] <- 'to_stanox'
+    segments_ranking <- left_join(segments_ranking, corpus, by = "to_stanox")
+    names(segments_ranking)[names(segments_ranking) == 'LAT'] <- 'to_lat'
+    names(segments_ranking)[names(segments_ranking) == 'LON'] <- 'to_lon'
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        features = sapply(lapply(split(stations_ranking, seq_along(stations_ranking[, 1])), as.list), function (rp) {
-            return(list(
-                type = "Feature",
-                geometry = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
-                properties = list(
-                    "title" = rp$description,
-                    "description" = paste0("This is the description for ", rp$description),
-                    "marker-size" = "large",
-                    "marker-symbol" = "rail"
-                )
-            ))              
-        })
+        features = c(
+            # the stations
+            sapply(lapply(split(stations_ranking, seq_along(stations_ranking[, 1])), as.list), function (rp) {
+                return(list(
+                    type = "Feature",
+                    geometry = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
+                    properties = list(
+                        "title" = rp$description,
+                        "description" = paste0("This is the description for ", rp$description),
+                        "marker-size" = "large",
+                        "marker-symbol" = "rail"
+                    )
+                ))              
+            }),
+            # the segments
+            sapply(lapply(split(segments_ranking, seq_along(segments_ranking[, 1])), as.list), function (segment) {
+                return(list(
+                    type = "Feature",
+                    geometry = list(type = "LineString", coordinates = list(c(segment$from_lon, segment$from_lat), c(segment$to_lon, segment$to_lat))),
+                    properties = list(
+                        "title" = paste0(segment$from_stanox, '_', segment$to_stanox),
+                        "stroke" = "FF0000",
+                        "stroke-opacity" = 0.8,
+                        "stroke-width" = 3
+                    )
+                ))              
+            })
+        )
     )
-    fileConn <- file("foo.geojson")
-    writeLines(toJSON(json_structure), fileConn)
-    close(fileConn)
+    if(!is.null(filename)) {
+        fileConn <- file(filename)
+        writeLines(toJSON(json_structure), fileConn)
+        close(fileConn)
+    }
     return(json_structure)
 }
