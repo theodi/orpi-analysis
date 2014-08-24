@@ -198,7 +198,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'geometry' = list(type = "LineString", coordinates = list(c(segment$from_lon, segment$from_lat), c(segment$to_lon, segment$to_lat))),
                     properties = list(
                         "title" = paste0(segment$from_stanox, '_', segment$to_stanox),
-                        "stroke" = substring(col2hcl("red", l = 100 * (segment$average_delay - min_segment_delay) / (max_segment_delay - min_segment_delay)), 1, 7),
+                        "stroke" = substring(col2hcl("red", alpha = 0.2 + 0.8 * (segment$average_delay - min_segment_delay) / (max_segment_delay - min_segment_delay)), 1, 7),
                         "stroke-opacity" = 1.0,
                         "stroke-width" = 2.0
                     )
