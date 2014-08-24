@@ -176,33 +176,33 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # create the JSON
     json_structure <- list(
         type = "FeatureCollection",
-        features = c(
+        features = list(
             # the stations
-            sapply(lapply(split(stations_ranking, seq_along(stations_ranking[, 1])), as.list), function (rp) {
-                return(list(
-                    type = "Feature",
-                    geometry = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
-                    properties = list(
-                        "title" = rp$description,
-                        "description" = paste0("This is the description for ", rp$description),
+            unname(lapply(lapply(split(stations_ranking, seq_along(stations_ranking[, 1])), as.list), function (rp) {
+                return(c(
+                    'type' = "Feature",
+                    'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
+                    'properties' = list(
+                        "title" = rp$Station.Name,
+                        "description" = paste0("This is the description for ", rp$Station.Name),
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     )
                 ))              
-            }),
+            })),
             # the segments
-            sapply(lapply(split(segments_ranking, seq_along(segments_ranking[, 1])), as.list), function (segment) {
-                return(list(
-                    type = "Feature",
-                    geometry = list(type = "LineString", coordinates = list(c(segment$from_lon, segment$from_lat), c(segment$to_lon, segment$to_lat))),
+            unname(lapply(lapply(split(segments_ranking, seq_along(segments_ranking[, 1])), as.list), function (segment) {
+                return(c(
+                    'type' = "Feature",
+                    'geometry' = list(type = "LineString", coordinates = list(c(segment$from_lon, segment$from_lat), c(segment$to_lon, segment$to_lat))),
                     properties = list(
                         "title" = paste0(segment$from_stanox, '_', segment$to_stanox),
                         "stroke" = substring(col2hcl("red", l = segment$average_delay / max_segment_delay), 1, 7),
-                        "stroke-opacity" = 1,
-                        "stroke-width" = 10
+                        "stroke-opacity" = 1.0,
+                        "stroke-width" = 5.0
                     )
                 ))              
-            })
+            }))
         )
     )
     if(!is.null(filename)) {
