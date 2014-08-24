@@ -153,6 +153,18 @@ overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_vari
 # early mapping
 
 make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
+
+    fix_columns_format_for_display <- function (df) {
+        # convert all columns start by 'perc_' in a more readable format
+        perc_column_names <- grep("^perc_", names(df), value = TRUE)
+        for (perc_column_name in perc_column_names) {
+            df[, perc_column_name] <- ifelse(df[, perc_column_name] > 0, percent(df[, perc_column_name]), "0%")
+        }
+        # truncate the decimals for the average delay
+        df$average_delay <- round(df$average_delay, 1)
+        return(df)        
+    }
+    
     # load the latest version of the corpus
     corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON', 'Station.Name')]
     # drop the stations that have no coordinates
@@ -164,10 +176,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     stations_ranking <- left_join(stations_ranking, corpus, by = "stanox")
-    perc_column_names <- grep("^perc_", names(stations_ranking), value = TRUE)
-    for (perc_column_name in perc_column_names) {
-        stations_ranking[, perc_column_name] <- ifelse(stations_ranking[, perc_column_name] > 0, percent(stations_ranking[, perc_column_name]), "0%")
-    }
+    stations_ranking <- fix_columns_format_for_display(stations_ranking)
     
     # enhancing the segment ranking data with the lat lon
     names(corpus)[names(corpus) == 'stanox'] <- 'from_stanox'
@@ -178,6 +187,9 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     segments_ranking <- left_join(segments_ranking, corpus, by = "to_stanox")
     names(segments_ranking)[names(segments_ranking) == 'LAT'] <- 'to_lat'
     names(segments_ranking)[names(segments_ranking) == 'LON'] <- 'to_lon'
+    segments_ranking <- fix_columns_format_for_display(segments_ranking)
+    
+    # to support the segments colouring
     min_segment_delay <- min(segments_ranking$average_delay)
     max_segment_delay <- max(segments_ranking$average_delay)
     
