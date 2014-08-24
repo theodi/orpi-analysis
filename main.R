@@ -197,8 +197,8 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     properties = list(
                         "title" = paste0(segment$from_stanox, '_', segment$to_stanox),
                         "stroke" = "FF0000",
-                        "stroke-opacity" = 0.8,
-                        "stroke-width" = 3
+                        "stroke-opacity" = 0.9,
+                        "stroke-width" = 10
                     )
                 ))              
             })
