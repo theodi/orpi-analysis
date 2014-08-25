@@ -6,6 +6,7 @@ RIGHT_TIME <- 1
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 PASSENGERS_JOURNEYS_PER_DAY_UK_WIDE <- 4360000
+AVG_TRAINS_PER_DAY <- 20000
 
 source('./download-from-S3.R')
 source('./download-corpus.R')
@@ -77,6 +78,7 @@ calculate_station_rank <- memoise(function (day_data, stanox = NULL) {
         average_delay <- ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0)        
         corpus <- download_corpus()
         corpus$Entries.Total <- as.numeric(corpus$Entries.Total)
+        # Doesn't take into account fluctuations in no. of trains - adjusted globally
         station_people_weight <- corpus[corpus$STANOX == stanox, "Entries.Total"] / sum(corpus[, "Entries.Total"]) * PASSENGERS_JOURNEYS_PER_DAY_UK_WIDE
         total_lost_minutes <- average_delay * station_people_weight * perc_of_delayed_trains
         return(data.frame(
@@ -187,7 +189,8 @@ calculate_day_rank <- memoise(function (date_from, date_to = NULL) {
         perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
         weights <- stations_ranking$no_of_delayed_trains / no_of_delayed_trains
         average_delay  <- weighted.mean(stations_ranking$average_delay, weights)
-        total_lost_minutes <- sum(stations_ranking$total_lost_minutes)
+        # Lost minutes adjusted by no. of trains
+        total_lost_minutes <- sum(stations_ranking$total_lost_minutes) * (no_of_trains / AVG_TRAINS_PER_DAY)
         return(data.frame(
             no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
