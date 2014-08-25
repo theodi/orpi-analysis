@@ -15,7 +15,12 @@ source('./download-corpus.R')
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads
-download_data <- memoise(function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3, AWS_BUCKET_NAME = "orpi-nrod-store") {
+download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3, AWS_BUCKET_NAME = "orpi-nrod-store") {
+    target_date <- as.Date(target_date)
+    return(download_data_memoised(target_date, EXTRA_HOURS, AWS_BUCKET_NAME))
+}
+
+download_data_memoised <- memoise(function (target_date, EXTRA_HOURS, AWS_BUCKET_NAME) {
     
     # downloads the reference corpus to get the list of stations that is relevant
     corpus <- download_corpus() 
