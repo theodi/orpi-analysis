@@ -65,26 +65,29 @@ calculate_station_rank <- memoise(function (day_data, stanox = NULL) {
         # station_data_only <- integrate_with_missing_arrivals(day_data, stanox)
         # if you need turning off integration, replace the line above with this below:
         station_data_only <- day_data[day_data$body.loc_stanox == stanox, ]
-        # starts calculating the stats for the location
+        # calculate the stats for the location
         no_of_trains <- length(unique(station_data_only$body.train_id))
         no_of_right_time_trains <- length(unique(station_data_only[station_data_only$body.timetable_variation <= RIGHT_TIME, ]$body.train_id))
+        perc_of_right_time_trains <- no_of_right_time_trains / no_of_trains
         delayed_station_data_only <- station_data_only[station_data_only$body.timetable_variation >= MINIMUM_DELAY, ]
         no_of_delayed_trains <- length(unique(delayed_station_data_only$body.train_id))
+        perc_of_delayed_trains <- no_of_delayed_trains / no_of_trains
         no_of_heavily_delayed_trains <- length(unique(delayed_station_data_only[delayed_station_data_only$body.timetable_variation >= HEAVY_DELAY, ]$body.train_id))
+        perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
         average_delay <- ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0)        
         corpus <- download_corpus()
         corpus$Entries.Total <- as.numeric(corpus$Entries.Total)
         station_people_weight <- corpus[corpus$STANOX == stanox, "Entries.Total"] / sum(corpus[, "Entries.Total"]) * PASSENGERS_JOURNEYS_PER_DAY_UK_WIDE
-        total_lost_minutes <- average_delay * station_people_weight
+        total_lost_minutes <- average_delay * station_people_weight * perc_of_delayed_trains
         return(data.frame(
             stanox = c(stanox),
             no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
-            perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
+            perc_of_right_time_trains = c(perc_of_right_time_trains),
             no_of_delayed_trains = c(no_of_delayed_trains),
-            perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
+            perc_of_delayed_trains = c(perc_of_delayed_trains),
             no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
-            perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains),
+            perc_of_heavily_delayed_trains = c(perc_of_heavily_delayed_trains),
             average_delay = c(average_delay),
             station_people_weight = c(station_people_weight),
             total_lost_minutes = c(total_lost_minutes)
