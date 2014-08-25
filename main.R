@@ -153,6 +153,52 @@ calculate_segment_rank <- memoise(function (day_data, from_stanox = NULL, to_sta
     }
 }) 
 
+# when looking at the data in its entirety, a "right time" train is a train
+# that was "right time" at all its stops, while a delayed train is a train 
+# that was delayed at any of its stops.
+calculate_day_rank <- memoise(function (date_from, date_to = NULL) {
+    date_from <- as.Date(date_from, origin = '1970-01-01')
+    if (!is.null(date_to)) {
+        date_to <- as.Date(date_to, origin = '1970-01-01')
+        date_range <- sapply(seq(0, date_to - date_from), function (x) { as.Date(date_from + x) });
+        return(do.call(rbind, lapply(date_range, function (d) calculate_day_rank(d))))
+    } else {
+        cat(paste0("Calculating for ", date_from, "...\n"))
+        day_data <- download_data(date_from)
+        stations_ranking <- calculate_station_rank(day_data)
+        no_of_trains <- length(unique(day_data$body.train_id))
+        temp <- day_data %.%
+            group_by(body.train_id) %.%
+            summarise(
+                # what about the missing arrivals integration???
+                no_of_events = length(body.train_id),
+                no_of_right_time_events = sum(body.timetable_variation <= RIGHT_TIME),
+                no_of_delayed_events = sum(body.timetable_variation >= MINIMUM_DELAY),
+                no_of_heavily_delayed_events = sum(body.timetable_variation >= HEAVY_DELAY)
+            )
+        no_of_right_time_trains <- nrow(temp[temp$no_of_events == temp$no_of_right_time_events, ])
+        perc_of_right_time_trains <- no_of_right_time_trains / no_of_trains
+        no_of_delayed_trains <- nrow(temp[temp$no_of_delayed_events > 1, ])
+        perc_of_delayed_trains <- no_of_delayed_trains / no_of_trains
+        no_of_heavily_delayed_trains <- nrow(temp[temp$no_of_heavily_delayed_events > 1, ])
+        perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
+        weights <- stations_ranking$no_of_delayed_trains / no_of_delayed_trains
+        average_delay  <- weighted.mean(stations_ranking$average_delay, weights)
+        total_lost_minutes <- sum(stations_ranking$total_lost_minutes)
+        return(data.frame(
+            no_of_trains = c(no_of_trains),
+            no_of_right_time_trains = c(no_of_right_time_trains),
+            perc_of_right_time_trains = c(perc_of_right_time_trains),
+            no_of_delayed_trains = c(no_of_delayed_trains),
+            perc_of_delayed_trains = c(perc_of_delayed_trains),
+            no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
+            perc_of_heavily_delayed_trains = c(perc_of_heavily_delayed_trains),
+            average_delay = c(average_delay),
+            total_lost_minutes = c(total_lost_minutes)
+        ))
+    }
+})
+
 #### UBER ORPI
 # a) weighted mean of the average delay at all stations vs the number of trains stopping at that station
 # b) define the mean delay for each train, and then calculate the mean of that vs all trains
