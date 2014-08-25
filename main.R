@@ -36,7 +36,7 @@ integrate_with_missing_arrivals <- memoise(function (day_data, stanox) {
             # if the earliest event is earlier than the departure at this station, 
             # the train must have arrived at this station, too!
             trains_that_must_have_arrived <- inner_join(trains_that_depart_only, earliest_events, by = "body.train_id")
-            trains_that_must_have_arrived <- trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id
+            trains_that_must_have_arrived <- unique(trains_that_must_have_arrived[trains_that_must_have_arrived$body.gbtt_timestamp > trains_that_must_have_arrived$earliest_event, ]$body.train_id)
             if (length(trains_that_must_have_arrived) > 0) {
                 # add dummy arrival records
                 dummy_arrivals <- location_data[(location_data$body.train_id %in% trains_that_must_have_arrived) & (location_data$body.event_type == 'DEPARTURE'), ]
@@ -61,7 +61,8 @@ calculate_station_rank <- memoise(function (day_data, stanox = NULL) {
         return(do.call(rbind, lapply(stanox, function (stanox) calculate_station_rank(day_data, stanox))))
     } else {
         # if stanox is not a vector, do the job for that station only
-        station_data_only <- integrate_with_missing_arrivals(day_data, stanox)
+        # station_data_only <- integrate_with_missing_arrivals(day_data, stanox)
+        station_data_only <- day_data[day_data$body.loc_stanox == stanox, ]
         # starts calculating the stats for the location
         no_of_trains <- length(unique(station_data_only$body.train_id))
         no_of_right_time_trains <- length(unique(station_data_only[station_data_only$body.timetable_variation <= RIGHT_TIME, ]$body.train_id))
@@ -148,7 +149,19 @@ calculate_segment_rank <- memoise(function (day_data, from_stanox = NULL, to_sta
 # b) define the mean delay for each train, and then calculate the mean of that vs all trains
 # c) mean of everything
 
-overall_average_delay  <- mean(clean_day_data[clean_day_data$body.timetable_variation >= MINIMUM_DELAY, ]$body.timetable_variation)
+# OLD! weighted mean  
+orpi <- function (stations_ranking) {
+    weights <- stations_ranking$no_of_trains / sum(stations_ranking$no_of_trains)
+    overall_average_delay  <- weighted.mean(
+        stations_ranking$average_delay,
+        weights     
+    )
+    return(overall_average_delay)
+}
+
+orpi2 <- function (arrivals) {
+    return(mean(arrivals[(arrivals$body.timetable_variation >= MINIMUM_DELAY) & (arrivals$body.event_type == 'DEPARTURE'), "body.timetable_variation"]))    
+}
 
 make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
 
