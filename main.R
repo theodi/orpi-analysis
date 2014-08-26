@@ -6,7 +6,7 @@ RIGHT_TIME <- 1
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 PASSENGERS_JOURNEYS_PER_DAY_UK_WIDE <- 4360000
-AVG_TRAINS_PER_DAY <- 20000
+AVG_DELAYED_TRAINS_PER_DAY <- 2219
 
 source('./download-from-S3.R')
 source('./download-corpus.R')
@@ -199,7 +199,7 @@ calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
         weights <- stations_ranking$no_of_delayed_trains / no_of_delayed_trains
         average_delay  <- weighted.mean(stations_ranking$average_delay, weights)
         # Lost minutes adjusted by no. of trains
-        total_lost_minutes <- sum(stations_ranking$total_lost_minutes) * (no_of_trains / AVG_TRAINS_PER_DAY)
+        total_lost_minutes <- sum(stations_ranking$total_lost_minutes) * (no_of_delayed_trains / AVG_DELAYED_TRAINS_PER_DAY)
         return(data.frame(
             date = c(date_from),
             no_of_trains = c(no_of_trains),
