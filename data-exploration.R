@@ -24,7 +24,8 @@ source('functions.r')
 source('clean-rail-data.R')
 #------------------------------------------------
 # Stored data locally - GF data prep from 19aug
-all <- readRDS('data/16aug-18aug-test.RData')
+readRDS('data/16aug-18aug-test.RData')
+all <- readRDS('data/data-2014-08-04.RData')
 
 # Clean with script
 all <- raildata.clean(all)
