@@ -161,15 +161,20 @@ calculate_segment_rank <- memoise(function (day_data, from_stanox = NULL, to_sta
 # when looking at the data in its entirety, a "right time" train is a train
 # that was "right time" at all its stops, while a delayed train is a train 
 # that was delayed at any of its stops.
-calculate_day_rank <- memoise(function (date_from, date_to = NULL) {
-    date_from <- as.Date(date_from, origin = '1970-01-01')
+calculate_day_rank <- function (date_from, date_to = NULL) {
+    if (class(date_from) != "Date") date_from <- as.Date(date_from, origin = '1970-01-01')
+    if (!is.null(date_to) && (class(date_to) != "Date")) date_to <- as.Date(date_to, origin = '1970-01-01')
+    return(calculate_day_rank_memoised(date_from, date_to))
+}
+
+calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
     if (!is.null(date_to)) {
-        date_to <- as.Date(date_to, origin = '1970-01-01')
         date_range <- sapply(seq(0, date_to - date_from), function (x) { as.Date(date_from + x) });
         return(do.call(rbind, lapply(date_range, function (d) calculate_day_rank(d))))
     } else {
-        cat(paste0("Calculating for ", date_from, "...\n"))
-        day_data <- download_data(date_from)
+        cat(paste0("Downloading data for ", date_from, "...\n"))
+        day_data <- download_data(paste0(formatC(format(date_from, "%Y"), width=4, flag="0"), "-", formatC(format(date_from, "%m"), width=2, flag="0"), "-", formatC(format(date_from, "%d"), width=2, flag="0")))
+        cat(paste0("Calculating rankings for ", date_from, "...\n"))
         stations_ranking <- calculate_station_rank(day_data)
         no_of_trains <- length(unique(day_data$body.train_id))
         temp <- day_data %.%
@@ -192,6 +197,7 @@ calculate_day_rank <- memoise(function (date_from, date_to = NULL) {
         # Lost minutes adjusted by no. of trains
         total_lost_minutes <- sum(stations_ranking$total_lost_minutes) * (no_of_trains / AVG_TRAINS_PER_DAY)
         return(data.frame(
+            date = c(date_from),
             no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
             perc_of_right_time_trains = c(perc_of_right_time_trains),
