@@ -139,21 +139,25 @@ calculate_segment_rank <- memoise(function (day_data, from_stanox = NULL, to_sta
         no_of_trains <- length(unique(segment_data$body.train_id))
         right_time_trains <- segment_data[segment_data$body.timetable_variation <= RIGHT_TIME, ]
         no_of_right_time_trains <- length(unique(right_time_trains$body.train_id))
+        perc_of_right_time_trains <- no_of_right_time_trains / no_of_trains
         delayed_trains <- segment_data[segment_data$body.timetable_variation >= MINIMUM_DELAY, ]
         no_of_delayed_trains <- length(unique(delayed_trains$body.train_id))
+        perc_of_delayed_trains <- no_of_delayed_trains / no_of_trains
         heavily_delayed_trains <- delayed_trains[delayed_trains$body.timetable_variation >= HEAVY_DELAY, ]
         no_of_heavily_delayed_trains <- length(unique(heavily_delayed_trains$body.train_id))
+        perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
+        average_delay <- ifelse(nrow(delayed_trains) > 0, mean(delayed_trains$body.timetable_variation), 0)
         return(data.frame(
             from_stanox = c(from_stanox),
             to_stanox = c(to_stanox),
             no_of_trains = c(no_of_trains),
             no_of_right_time_trains = c(no_of_right_time_trains),
-            perc_of_right_time_trains = c(no_of_right_time_trains / no_of_trains),
+            perc_of_right_time_trains = c(perc_of_right_time_trains),
             no_of_delayed_trains = c(no_of_delayed_trains),
-            perc_of_delayed_trains = c(no_of_delayed_trains / no_of_trains),
+            perc_of_delayed_trains = c(perc_of_delayed_trains),
             no_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains),
-            perc_of_heavily_delayed_trains = c(no_of_heavily_delayed_trains / no_of_trains),
-            average_delay = c(ifelse(nrow(delayed_trains) > 0, mean(delayed_trains$body.timetable_variation), 0))
+            perc_of_heavily_delayed_trains = c(perc_of_heavily_delayed_trains),
+            average_delay = c(average_delay)
         ))
     }
 }) 
