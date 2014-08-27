@@ -75,12 +75,13 @@ calculate_station_rank <- memoise(function (day_data, stanox = NULL) {
         perc_of_delayed_trains <- no_of_delayed_trains / no_of_trains
         no_of_heavily_delayed_trains <- length(unique(delayed_station_data_only[delayed_station_data_only$body.timetable_variation >= HEAVY_DELAY, ]$body.train_id))
         perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
-        average_delay <- ifelse(nrow(delayed_station_data_only) > 0, mean(delayed_station_data_only$body.timetable_variation), 0)        
+        not_right_time_delays <- station_data_only[station_data_only$body.timetable_variation > RIGHT_TIME, "body.timetable_variation"]
+        average_delay <- ifelse(length(not_right_time_delays) > 0, mean(not_right_time_delays), 0)        
         corpus <- download_corpus()
         corpus$Entries.Total <- as.numeric(corpus$Entries.Total)
         # Doesn't take into account fluctuations in no. of trains - adjusted globally
         station_people_weight <- corpus[corpus$STANOX == stanox, "Entries.Total"] / sum(corpus[, "Entries.Total"]) * PASSENGERS_JOURNEYS_PER_DAY_UK_WIDE
-        total_lost_minutes <- average_delay * station_people_weight * perc_of_delayed_trains
+        total_lost_minutes <- average_delay * station_people_weight * (1 - perc_of_right_time_trains)
         return(data.frame(
             stanox = c(stanox),
             no_of_trains = c(no_of_trains),
@@ -146,7 +147,8 @@ calculate_segment_rank <- memoise(function (day_data, from_stanox = NULL, to_sta
         heavily_delayed_trains <- delayed_trains[delayed_trains$body.timetable_variation >= HEAVY_DELAY, ]
         no_of_heavily_delayed_trains <- length(unique(heavily_delayed_trains$body.train_id))
         perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
-        average_delay <- ifelse(nrow(delayed_trains) > 0, mean(delayed_trains$body.timetable_variation), 0)
+        not_right_time_delays <- segment_data[segment_data$body.timetable_variation > RIGHT_TIME, "body.timetable_variation"]
+        average_delay <- ifelse(length(not_right_time_delays) > 0, mean(not_right_time_delays), 0)
         return(data.frame(
             from_stanox = c(from_stanox),
             to_stanox = c(to_stanox),
