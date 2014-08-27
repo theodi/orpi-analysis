@@ -198,7 +198,7 @@ calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
         perc_of_delayed_trains <- no_of_delayed_trains / no_of_trains
         no_of_heavily_delayed_trains <- nrow(temp[temp$no_of_heavily_delayed_events > 1, ])
         perc_of_heavily_delayed_trains <- no_of_heavily_delayed_trains / no_of_trains
-        weights <- stations_ranking$no_of_delayed_trains / no_of_delayed_trains
+        weights <- stations_ranking$not_right_time_delays / not_right_time_delays
         average_delay  <- weighted.mean(stations_ranking$average_delay, weights)
         # Lost minutes adjusted by no. of trains
         total_lost_minutes <- sum(stations_ranking$total_lost_minutes) * (no_of_delayed_trains / AVG_DELAYED_TRAINS_PER_DAY)
