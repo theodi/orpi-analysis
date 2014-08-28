@@ -15,12 +15,12 @@ source('./download-corpus.R')
 # Note that a series of "MD5 signatures do not match" warnings will be 
 # generated to stderr: this is caused by s3cmd not managing correctly
 # the MD5 of multipart uploads
-download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3, AWS_BUCKET_NAME = "orpi-nrod-store") {
+download_data <- function (target_date = (Sys.Date() - 1), EXTRA_HOURS = 3, AWS_BUCKET_NAME = "orpi-nrod-store", S3CMD_PATH = "/usr/local/bin/s3cmd") {
     target_date <- as.Date(target_date)
-    return(download_data_memoised(target_date, EXTRA_HOURS, AWS_BUCKET_NAME))
+    return(download_data_memoised(target_date, EXTRA_HOURS, AWS_BUCKET_NAME, S3CMD_PATH))
 }
 
-download_data_memoised <- memoise(function (target_date, EXTRA_HOURS, AWS_BUCKET_NAME) {
+download_data_memoised <- memoise(function (target_date, EXTRA_HOURS, AWS_BUCKET_NAME, S3CMD_PATH) {
     
     # downloads the reference corpus to get the list of stations that is relevant
     corpus <- download_corpus() 
@@ -31,14 +31,17 @@ download_data_memoised <- memoise(function (target_date, EXTRA_HOURS, AWS_BUCKET
     get_files_list <- function (target_date, hourStart = 0, hourEnd = 23) {
         # gets the files list from S3
         path <- paste0("s3://", AWS_BUCKET_NAME, "/", formatC(format(target_date, "%Y"), width=4, flag="0"), "/", formatC(format(target_date, "%m"), width=2, flag="0"), "/", formatC(format(target_date, "%d"), width=2, flag="0"), "/")
-        s3cmd_command <- paste0("/usr/local/bin/s3cmd ls ", path)
-        available_files <- read.table(pipe(s3cmd_command), header = F, sep="", colClasses = "character")
+        s3cmd_command <- paste0(S3CMD_PATH, " ls ", path)
+        output_of_s3cmd_command <- pipe(s3cmd_command)
+        # the one below is a dirty trick to see if there are results or not,
+        # should be improved
+        available_files <- read.table(output_of_s3cmd_command, header = F, sep="", colClasses = "character")
         available_files <- available_files[, ncol(available_files)]  
         # if specified, filters out the hours outside of the specified interval
         grep_regexpr <- paste0("^", path, "arrivals_", formatC(format(target_date, "%Y"), width=4, flag="0"), formatC(format(target_date, "%m"), width=2, flag="0"), formatC(format(target_date, "%d"), width=2, flag="0"), "(", paste(formatC(seq(hourStart, hourEnd), width=2, flag="0"), collapse="|"), ")")
         available_files <- grep(grep_regexpr, available_files, value = TRUE)        
         # returns the list in chronological order        
-        sort(available_files)
+        return(sort(available_files))
     }
     
     # create the list of files that I need to read
@@ -55,7 +58,7 @@ download_data_memoised <- memoise(function (target_date, EXTRA_HOURS, AWS_BUCKET
     results <- data.frame();
     sapply(files_list, function (filename) {
         cat(paste0("Reading ", filename, "...\n"));
-        results <<- rbind(results, read.csv(pipe(paste0("/usr/local/bin/s3cmd get ", filename, " -")), header = TRUE, stringsAsFactors = FALSE))
+        results <<- rbind(results, read.csv(pipe(paste0(S3CMD_PATH, " get ", filename, " -")), header = TRUE, stringsAsFactors = FALSE))
     });
 
     # drop rows that do not belong to relevant stations
