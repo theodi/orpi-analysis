@@ -121,7 +121,7 @@ download_data_memoised <- memoise(function (target_date, EXTRA_HOURS, AWS_BUCKET
     results$body.timetable_variation <- ifelse(results$body.variation_status == "EARLY", -1 * results$body.timetable_variation, results$body.timetable_variation)
     
     # drop the columns I do not need
-    results <- results[, names(results) %in% c("body.train_id", 
+    results <- results[, names(results) %in% c("body.train_id", "body.toc_id",
         "body.actual_timestamp", "body.event_type", "body.loc_stanox",
         "body.gbtt_timestamp", "body.timetable_variation")]
     
