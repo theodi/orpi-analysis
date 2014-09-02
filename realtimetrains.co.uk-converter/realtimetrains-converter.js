@@ -14,29 +14,34 @@ var // https://github.com/caolan/async
 		.argv,
 	_ = require('underscore');
 
+var stanoxBy3alpha = { },
+	stanoxByTiploc = { };
+
 var fetchCorpus = function (corpusFilename, callback) {
 	if (!fs.existsSync(corpusFilename)) {
 		callback(new Error("The specified filename for the corpus does not exist."));
 	} else {
 		csv()
 			.from.path(argv.corpus, { 'columns': true })
-			.to.array(function (data) {
-				var corpus = { };
+			.to.array(function (data) { 
 				data.forEach(function (station) {
-					corpus[station["3ALPHA"]] = station.STANOX;
+					stanoxBy3alpha[station['3ALPHA']] = station.STANOX;
+					stanoxByTiploc[station.TIPLOC] = station.STANOX;
 				});
-				callback(null, corpus); 
+				callback(null); 
 			});			
 	}
 }
 
-var convert = function (corpus, inFile, outFile, callback) {
+var convert = function (inFile, outFile, callback) {
 
 	var noOfRecords = 0,
 		noOfIrregularJsonRecords = 0,
 		noOfNonPassengerTrains = 0,
 		noOfTrainsLackingSomeRealtimeInformation = 0,
-		noOfTrainsWithAnyLocationCancelled = 0;
+		noOfTrainsWithAnyLocationCancelled = 0, 
+		noOfTrainsReferencingUnknownStations = 0,
+		unknownStations = [ ];
 
 	var dateToCSVDate = function (d) {
 		return d.getFullYear() + "/" + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + "/" + (d.getDate() < 10 ? '0' : '') + d.getDate() + " " + (d.getHours() < 10 ? '0' : '') + d.getHours() + ":" + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
@@ -60,6 +65,8 @@ var convert = function (corpus, inFile, outFile, callback) {
 			'noOfNonPassengerTrains': noOfNonPassengerTrains,
 			'noOfTrainsWithAnyLocationCancelled': noOfTrainsWithAnyLocationCancelled,
 			'noOfTrainsLackingSomeRealtimeInformation': noOfTrainsLackingSomeRealtimeInformation,
+			'noOfTrainsReferencingUnknownStations': noOfTrainsReferencingUnknownStations,
+			'unknownStations': unknownStations,
 		});
 	})
 
@@ -71,6 +78,7 @@ var convert = function (corpus, inFile, outFile, callback) {
 
 			var createOrpiRecord = function (ar, location) {
 				var event_type,
+					stanox = stanoxBy3alpha[location.crs] || stanoxByTiploc[location.tiploc],
 					timetableVariation,
 					gbttTimestamp,
 					actualTimestamp;
@@ -94,23 +102,30 @@ var convert = function (corpus, inFile, outFile, callback) {
 					// realtimetrains.co.uk' trainIdentity is fit to the 
 					// same purpose
 					"body.train_id": train.trainIdentity,
-					"body.stanox": corpus[location.crs],
+					// TODO: toc_id should be a number for consistency with 
+					// ORPI's logs
+					"body.toc_id": train.atocCode,
+					"body.loc_stanox": stanox,
 					"body.event_type": eventType,
 					"body.gbtt_timestamp": dateToCSVDate(gbttTimestamp),
 					"body.actual_timestamp": dateToCSVDate(actualTimestamp),
 					"body.timetable_variation": timetableVariation,
 				};
-			}
+			};
 
-			var originTimestamp = new Date(train.runDate + " " + recordAsJson.origin[0].publicTime.substring(0, 2) + ":" + recordAsJson.origin[0].publicTime.substring(2, 4));
+			// some origin records do not have a publicTime but have a 
+			// workingTime, that includes seconds
+			var outRecord,
+				originTimestamp = recordAsJson.origin[0].publicTime || recordAsJson.origin[0].workingTime.substring(0, 4);
+			originTimestamp = new Date(train.runDate + " " + originTimestamp.substring(0, 2) + ":" + originTimestamp.substring(2, 4));
 			train.locations.forEach(function (location) {
 				if (location.gbttBookedArrival) {
-					// console.log(JSON.stringify(createOrpiRecord('a', location)));
-					outStream.write(JSON.stringify(createOrpiRecord('a', location)) + '\n');					
+					outRecord = createOrpiRecord('a', location);
+					if (outRecord) outStream.write(JSON.stringify(outRecord) + '\n');					
 				}
 				if (location.gbttBookedDeparture) {
-					// console.log(JSON.stringify(createOrpiRecord('d', location)));
-					outStream.write(JSON.stringify(createOrpiRecord('d', location)) + '\n');					
+					outRecord = createOrpiRecord('d', location);
+					if (outRecord) outStream.write(JSON.stringify(outRecord) + '\n');					
 				}
 			});
 
@@ -127,6 +142,20 @@ var convert = function (corpus, inFile, outFile, callback) {
 				// discard if not a passenger train
 				noOfNonPassengerTrains++;
 			} else {
+				// drop information about stations that are not referenced
+				// in the ORR reports
+				var anyUnknownStations = false;
+				recordAsJson.locations = recordAsJson.locations.filter(function (location) {
+					var stationId = stanoxBy3alpha[location.crs] || stanoxByTiploc[location.tiploc];
+					if (!stationId) {
+						unknownStations = _.uniq(unknownStations.concat(location.crs || location.tiploc)).sort();
+						anyUnknownStations = true;
+						return false;
+					} else {
+						return true;
+					}
+				});
+				if (anyUnknownStations) noOfTrainsReferencingUnknownStations++;
 				// drop information about cancelled stops; this is not ideal and 
 				// is done just for consistency with the ORPI's own logs, where
 				// cancellations are not visible 
@@ -159,13 +188,15 @@ var convert = function (corpus, inFile, outFile, callback) {
 
 var main = function () {
 
-	fetchCorpus(argv.corpus, function (err, corpus) {
+	fetchCorpus(argv.corpus, function (err) {
 		var consolidatedStats = { };
 		async.eachSeries(argv._, function (inputFilename, callback) {
 			console.log("Converting " + inputFilename + "...");
-			convert(corpus, inputFilename, path.join(argv.out, path.basename(inputFilename)), function (err, conversionStats) {
+			convert(inputFilename, path.join(argv.out, path.basename(inputFilename)), function (err, conversionStats) {
 				_.keys(conversionStats).forEach(function (key) {
-					consolidatedStats[key] = (!consolidatedStats[key] ? 0 : consolidatedStats[key]) + conversionStats[key]; 
+					consolidatedStats[key] = _.isArray(conversionStats[key]) ? 
+						_.uniq((!consolidatedStats[key] ? [ ] : consolidatedStats[key]).concat(conversionStats[key])).sort() :
+						(!consolidatedStats[key] ? 0 : consolidatedStats[key]) + conversionStats[key]; 
 				});
 				callback(null);
 			});	
@@ -175,6 +206,8 @@ var main = function () {
 			console.log("- " + consolidatedStats.noOfNonPassengerTrains + " (" + (consolidatedStats.noOfNonPassengerTrains / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains dropped as not passenger ones.");
 			console.log("- " + consolidatedStats.noOfTrainsWithAnyLocationCancelled + " (" + (consolidatedStats.noOfTrainsWithAnyLocationCancelled / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains had one or more cancelled stops information dropped.");
 			console.log("- " + consolidatedStats.noOfTrainsLackingSomeRealtimeInformation + " (" + (consolidatedStats.noOfTrainsLackingSomeRealtimeInformation / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains dropped as lacking some realtime information.");
+			console.log("- " + consolidatedStats.noOfTrainsReferencingUnknownStations + " (" + (consolidatedStats.noOfTrainsReferencingUnknownStations / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains stopped at one or more stations that are not in the corpus.");
+			console.log("- The referenced stations that are not in the corpus are (3ALPHA or TIPLOC): " + consolidatedStats.unknownStations.join(", ") + ".");
 		});
 	});
 }
