@@ -8,8 +8,8 @@ var // https://github.com/caolan/async
 	readline = require('readline'), 
 	// https://github.com/chevex/yargs
 	argv = require('yargs')
-		.usage('Usage: --corpups <filename> --in <filename> --out <output folder>')
-		.demand([ 'corpus', 'in', 'out' ])
+		.usage('Usage: --corpus <filename> --out <output folder> <input filename 1> <input filename 2...>')
+		.demand([ 'corpus', 'out' ])
 		.default('corpus', '../../orpi-corpus/data/corpus.csv')
 		.argv,
 	_ = require('underscore');
@@ -157,20 +157,11 @@ var convert = function (corpus, inFile, outFile, callback) {
 
 }
 
-// given a path including wildcards or an array thereof, this function
-// returns the full list of actual files
-var expandWildcardArgvs = function (x) {
-	if(!_.isArray(x)) x = [ x ];
-	return x.reduce(function (memo, entry) {
-		return(memo.concat(fs.statSync(entry).isFile() ? entry : fs.readdirSync(entry)));
-	}, [ ]);
-}
-
 var main = function () {
 
 	fetchCorpus(argv.corpus, function (err, corpus) {
 		var consolidatedStats = { };
-		async.eachSeries(expandWildcardArgvs(argv.in), function (inputFilename, callback) {
+		async.eachSeries(argv._, function (inputFilename, callback) {
 			console.log("Converting " + inputFilename + "...");
 			convert(corpus, inputFilename, path.join(argv.out, path.basename(inputFilename)), function (err, conversionStats) {
 				_.keys(conversionStats).forEach(function (key) {
