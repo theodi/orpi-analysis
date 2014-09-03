@@ -39,7 +39,9 @@ var fetchCorpus = function (corpusFilename, callback) {
 
 var convert = function (inFile, outFile, callback) {
 
-	var noOfRecords = 0,
+	var inStream = fs.createReadStream(inFile),
+		outStream = fs.createWriteStream(outFile),
+		noOfRecords = 0,
 		noOfIrregularJsonRecords = 0,
 		noOfNonPassengerTrains = 0,
 		noOfTrainsLackingSomeRealtimeInformation = 0,
@@ -51,20 +53,18 @@ var convert = function (inFile, outFile, callback) {
 		return d.getFullYear() + "/" + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + "/" + (d.getDate() < 10 ? '0' : '') + d.getDate() + " " + (d.getHours() < 10 ? '0' : '') + d.getHours() + ":" + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
 	}
 
-	var inStream = fs.createReadStream(inFile),
-		outStream = fs.createWriteStream(outFile),
-		// use of readline inspired by http://stackoverflow.com/a/16013228
-		// but BROKEN!!!
-		rl = readline.createInterface({
 	// write the output CSV header
 	outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(columnName); }).join(",") + '\n');
+
+	// use of readline inspired by http://stackoverflow.com/a/16013228
+	// but BROKEN!!!
+	var	rl = readline.createInterface({
 		    	input: inStream,
 		    	// output: outStream,
 		    	terminal: false
 			});
 
-	rl.on('close', function () {
-		outStream.close();
+	outStream.on('end', function () {
 		callback(null, {
 			'noOfRecords': noOfRecords,
 			'noOfIrregularJsonRecords': noOfIrregularJsonRecords,
@@ -214,7 +214,7 @@ var main = function () {
 			console.log("- " + consolidatedStats.noOfNonPassengerTrains + " (" + (consolidatedStats.noOfNonPassengerTrains / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains dropped as not passenger ones.");
 			console.log("- " + consolidatedStats.noOfTrainsWithAnyLocationCancelled + " (" + (consolidatedStats.noOfTrainsWithAnyLocationCancelled / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains had one or more cancelled stops information dropped.");
 			console.log("- " + consolidatedStats.noOfTrainsLackingSomeRealtimeInformation + " (" + (consolidatedStats.noOfTrainsLackingSomeRealtimeInformation / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains dropped as lacking some realtime information.");
-			console.log("- " + consolidatedStats.noOfTrainsReferencingUnknownStations + " (" + (consolidatedStats.noOfTrainsReferencingUnknownStations / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains stopped at one or more stations that are not in the corpus.");
+			console.log("- " + consolidatedStats.noOfTrainsReferencingUnknownStations + " (" + (consolidatedStats.noOfTrainsReferencingUnknownStations / consolidatedStats.noOfRecords * 100).toFixed(1) + "%) trains stopped at one or more stations that are not in the corpus, those calls have been dropped.");
 			console.log("- The referenced stations that are not in the corpus are (3ALPHA or TIPLOC): " + consolidatedStats.unknownStations.join(", ") + ".");
 		});
 	});
