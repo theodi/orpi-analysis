@@ -1,9 +1,7 @@
 # For Tom
-- the *lateness* fields sometimes do not correspond to the difference between the gbtt and the realtime timestamps! I've decided to ignore them and re-calculate them vs the timestamps.
-- See example2.json: all 'location' records miss the *realtimeDeparture* and/or *realtimeArrival* fields. Does it mean that they were on time or that we just don't know?
-- See example3.json: origin has a workingTime but does not have a publicTime, is that normal? does that mean that the two times are the same?
 
 # For myself
+- too few records in the output, what's happening?!?!?
 - orpi-corpus should drop carriage returns from the column names
 
 # For Yargs
