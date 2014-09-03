@@ -54,7 +54,7 @@ var convert = function (inFile, outFile, callback) {
 	}
 
 	// write the output CSV header
-	outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(columnName); }).join(",") + '\n');
+	outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(columnName); }).join(","));
 
 	// use of readline inspired by http://stackoverflow.com/a/16013228
 	// but BROKEN!!!
@@ -129,11 +129,11 @@ var convert = function (inFile, outFile, callback) {
 			train.locations.forEach(function (location) {
 				if (location.gbttBookedArrival) {
 					outRecord = createOrpiRecord('a', location);
-					outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(outRecord[columnName]); }).join(",") + '\n');	
+					outStream.write('\n' + OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(outRecord[columnName]); }).join(","));	
 				}
 				if (location.gbttBookedDeparture) {
 					outRecord = createOrpiRecord('d', location);
-					outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(outRecord[columnName]); }).join(",") + '\n');					
+					outStream.write('\n' + OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(outRecord[columnName]); }).join(","));					
 				}
 			});
 
