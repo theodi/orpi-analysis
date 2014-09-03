@@ -85,23 +85,25 @@ var convert = function (inFile, outFile, callback) {
 				if (ar === 'a') {
 					eventType = 'ARRIVAL';
 					gbttTimestamp = new Date(recordAsJson.runDate + " " + location.gbttBookedArrival.substring(0, 2) + ":" + location.gbttBookedArrival.substring(2, 4));
+					if (location.gbttBookedArrivalNextDay) gbttTimestamp = new Date(gbttTimestamp.valueOf() + 86400000);
 					actualTimestamp = new Date(recordAsJson.runDate + " " + location.realtimeArrival.substring(0, 2) + ":" + location.realtimeArrival.substring(2, 4));
+					if (location.realtimeArrivalNextDay) actualTimestamp = new Date(actualTimestamp.valueOf() + 86400000);
 				} else {
 					eventType = 'DEPARTURE';
 					gbttTimestamp = new Date(recordAsJson.runDate + " " + location.gbttBookedDeparture.substring(0, 2) + ":" + location.gbttBookedDeparture.substring(2, 4));
+					if (location.gbttBookedDepartureNextDay) gbttTimestamp = new Date(gbttTimestamp.valueOf() + 86400000);
 					actualTimestamp = new Date(recordAsJson.runDate + " " + location.realtimeDeparture.substring(0, 2) + ":" + location.realtimeDeparture.substring(2, 4));
+					if (location.realtimeDepartureNextDay) actualTimestamp = new Date(actualTimestamp.valueOf() + 86400000);
 				}
 				timetableVariation = (actualTimestamp - gbttTimestamp) / 60000;
-				// fix for trains that originate in one day and travel
-				// through the next 
 				if (gbttTimestamp < originTimestamp) gbttTimestamp = new Date(gbttTimestamp.valueOf() + 86400000);
 				if (actualTimestamp < originTimestamp) actualTimestamp = new Date(actualTimestamp.valueOf() + 86400000);
 				return { 
-					// note that body.train_id does not have the same 
+					// note that body.serviceUid does not have the same 
 					// meaning as in the log ORPI stores, but using 
-					// realtimetrains.co.uk' trainIdentity is fit to the 
+					// realtimetrains.co.uk' serviceUid is fit to the 
 					// same purpose
-					"body.train_id": train.trainIdentity,
+					"body.train_id": train.serviceUid,
 					// TODO: toc_id should be a number for consistency with 
 					// ORPI's logs
 					"body.toc_id": train.atocCode,
