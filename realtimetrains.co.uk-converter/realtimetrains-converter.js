@@ -14,6 +14,10 @@ var // https://github.com/caolan/async
 		.argv,
 	_ = require('underscore');
 
+var OUTPUT_COLUMNS = [ "body.train_id", "body.toc_id", "body.loc_stanox",
+	"body.event_type", "body.gbtt_timestamp", "body.actual_timestamp", 
+	"body.timetable_variation" ];
+
 var stanoxBy3alpha = { },
 	stanoxByTiploc = { };
 
@@ -52,6 +56,8 @@ var convert = function (inFile, outFile, callback) {
 		// use of readline inspired by http://stackoverflow.com/a/16013228
 		// but BROKEN!!!
 		rl = readline.createInterface({
+	// write the output CSV header
+	outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(columnName); }).join(",") + '\n');
 		    	input: inStream,
 		    	// output: outStream,
 		    	terminal: false
@@ -123,11 +129,11 @@ var convert = function (inFile, outFile, callback) {
 			train.locations.forEach(function (location) {
 				if (location.gbttBookedArrival) {
 					outRecord = createOrpiRecord('a', location);
-					if (outRecord) outStream.write(JSON.stringify(outRecord) + '\n');					
+					outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(outRecord[columnName]); }).join(",") + '\n');	
 				}
 				if (location.gbttBookedDeparture) {
 					outRecord = createOrpiRecord('d', location);
-					if (outRecord) outStream.write(JSON.stringify(outRecord) + '\n');					
+					outStream.write(OUTPUT_COLUMNS.map(function (columnName) { return JSON.stringify(outRecord[columnName]); }).join(",") + '\n');					
 				}
 			});
 
@@ -194,7 +200,7 @@ var main = function () {
 		var consolidatedStats = { };
 		async.eachSeries(argv._, function (inputFilename, callback) {
 			console.log("Converting " + inputFilename + "...");
-			convert(inputFilename, path.join(argv.out, path.basename(inputFilename)), function (err, conversionStats) {
+			convert(inputFilename, path.join(argv.out, path.basename(inputFilename)) + ".csv", function (err, conversionStats) {
 				_.keys(conversionStats).forEach(function (key) {
 					consolidatedStats[key] = _.isArray(conversionStats[key]) ? 
 						_.uniq((!consolidatedStats[key] ? [ ] : consolidatedStats[key]).concat(conversionStats[key])).sort() :
