@@ -64,7 +64,7 @@ var convert = function (inFile, outFile, callback) {
 		    	terminal: false
 			});
 
-	outStream.on('end', function () {
+	outStream.on('close', function () {
 		callback(null, {
 			'noOfRecords': noOfRecords,
 			'noOfIrregularJsonRecords': noOfIrregularJsonRecords,
@@ -74,7 +74,7 @@ var convert = function (inFile, outFile, callback) {
 			'noOfTrainsReferencingUnknownStations': noOfTrainsReferencingUnknownStations,
 			'unknownStations': unknownStations,
 		});
-	})
+	});
 
 	rl.on('line', function (line) {
 
