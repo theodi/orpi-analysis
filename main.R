@@ -218,26 +218,6 @@ calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
     }
 })
 
-#### UBER ORPI
-# a) weighted mean of the average delay at all stations vs the number of trains stopping at that station
-# b) define the mean delay for each train, and then calculate the mean of that vs all trains
-# c) mean of everything
-
-orpi1 <- function (stations_ranking) {
-    weights <- stations_ranking$no_of_delayed_trains / sum(stations_ranking$no_of_delayed_trains)
-    overall_average_delay  <- weighted.mean(
-        stations_ranking$average_delay,
-        weights     
-    )
-    return(overall_average_delay)
-}
-
-orpi2 <- function (arrivals) {
-    return(mean(arrivals[(arrivals$body.timetable_variation >= MINIMUM_DELAY) & (arrivals$body.event_type == 'DEPARTURE'), "body.timetable_variation"]))    
-}
-
-
-
 make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
 
     fix_columns_format_for_display <- function (df) {
