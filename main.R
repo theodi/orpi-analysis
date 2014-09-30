@@ -275,7 +275,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                     'properties' = do.call(c, list(
-                        rp[names(rp) %in% c('Station.Name', 'average_delay')],
+                        rp[names(rp) %in% c('Station.Name', 'no_of_trains', 'average_delay')],
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     ))
@@ -290,7 +290,6 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                         # uncomment below if you want all stats calculated for
                         # segments to be part of the GeoJSON
                         # segment[!(names(segment) %in% c('from_stanox', 'to_stanox', 'from_lat', 'from_lon', 'to_lat', 'to_lon'))],
-                        "average_delay" = segment$average_delay, 
                         "stroke" = ifelse(segment$average_delay == 0, "#BEBEBE", "#FF0000"),
                         "stroke-opacity" = ifelse(segment$average_delay == 0, min_opacity, round((min_alpha + exp_base ^ (segment$average_delay - min_segment_delay)) / 100, 2)),
                         "stroke-width" = ifelse(segment$average_delay == 0, 2, 3)
