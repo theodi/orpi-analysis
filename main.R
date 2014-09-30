@@ -220,6 +220,8 @@ calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
 
 make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
 
+    filename <- 'foo2.geojson'
+    
     fix_columns_format_for_display <- function (df) {
         # convert all columns start by 'perc_' in a more readable format
         perc_column_names <- grep("^perc_", names(df), value = TRUE)
@@ -233,11 +235,12 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     
     # load the latest version of the corpus
     corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON', 'Station.Name')]
+
     # drop the stations that have no coordinates
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), ]
     stations_ranking <- stations_ranking[stations_ranking$stanox %in% corpus$STANOX, ]
     segments_ranking <- segments_ranking[(segments_ranking$from_stanox %in% corpus$STANOX) & (segments_ranking$to_stanox %in% corpus$STANOX), ]
-
+        
     # enhancing the station ranking data with the lat lon
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
@@ -258,6 +261,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # to support the segments colouring
     min_segment_delay <- min(segments_ranking$average_delay)
     max_segment_delay <- max(segments_ranking$average_delay)
+    min_alpha <- 10
     min_opacity <- 30
     exp_base <- (100 - min_opacity) ^ (1 / (max_segment_delay - min_segment_delay))
     
@@ -271,7 +275,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                     'properties' = do.call(c, list(
-                        rp[!(names(rp) %in% c('stanox', 'LAT', 'LON'))],
+                        rp[names(rp) %in% c('Station.Name', 'average_delay')],
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     ))
