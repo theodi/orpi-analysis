@@ -220,8 +220,6 @@ calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
 
 make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
 
-    filename <- 'foo2.geojson'
-    
     # load the latest version of the corpus
     corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON', 'Station.Name')]
 
