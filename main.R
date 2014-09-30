@@ -242,7 +242,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     segments_ranking <- segments_ranking[(segments_ranking$from_stanox %in% corpus$STANOX) & (segments_ranking$to_stanox %in% corpus$STANOX), ]
     
     # do some roundings 
-    stations_ranking$perc_of_delayed_trains <- round(stations_ranking$perc_of_delayed_trains, 0)
+    stations_ranking$perc_of_delayed_trains <- round(stations_ranking$perc_of_delayed_trains, 3)
     segments_ranking$average_delay <- round(segments_ranking$average_delay, 0)
     
     # enhancing the station ranking data with the lat lon
@@ -270,9 +270,9 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     exp_base <- (100 - min_opacity) ^ (1 / (max_segment_delay - min_segment_delay))
     
     # drops and renames the columns to something more human
-    stations_ranking <- stations_ranking[, names(stations_ranking) %in% c('Station.Name', 'no_of_trains', 'no_of_delayed_trains', 'perc_of_delayed_trains', 'LAT', 'LON')]
+    stations_ranking <- stations_ranking[, names(stations_ranking) %in% c('Station.Name', 'no_of_trains', 'no_of_delayed_trains', 'perc_of_delayed_trains', 'average_delay', 'LAT', 'LON')]
     # TODO: renaming columns by assuming their position is bad!!!
-    names(stations_ranking) <- c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'LAT', 'LON', 'Station name')
+    names(stations_ranking) <- c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Average delay', 'LAT', 'LON', 'Station name')
     
     # create the JSON
     json_structure <- list(
@@ -284,7 +284,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                     'properties' = do.call(c, list(
-                        rp[names(rp) %in% c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Station name')],
+                        rp[names(rp) %in% c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Average delay', 'Station name')],
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     ))
