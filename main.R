@@ -284,7 +284,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                     'properties' = do.call(c, list(
-                        rp[names(rp) %in% c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'LAT', 'LON', 'Station name')],
+                        rp[names(rp) %in% c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Station name')],
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     ))
