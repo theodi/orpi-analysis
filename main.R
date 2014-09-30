@@ -222,17 +222,6 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
 
     filename <- 'foo2.geojson'
     
-    fix_columns_format_for_display <- function (df) {
-        # convert all columns start by 'perc_' in a more readable format
-        perc_column_names <- grep("^perc_", names(df), value = TRUE)
-        for (perc_column_name in perc_column_names) {
-            df[, perc_column_name] <- ifelse(df[, perc_column_name] > 0, percent(df[, perc_column_name]), "0%")
-        }
-        # truncate the decimals for the average delay
-        df$average_delay <- round(df$average_delay, 1)
-        return(df)        
-    }
-    
     # load the latest version of the corpus
     corpus <- download_corpus()[, c('STANOX', 'LAT', 'LON', 'Station.Name')]
 
@@ -242,14 +231,14 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     segments_ranking <- segments_ranking[(segments_ranking$from_stanox %in% corpus$STANOX) & (segments_ranking$to_stanox %in% corpus$STANOX), ]
     
     # do some roundings 
-    stations_ranking$perc_of_delayed_trains <- round(stations_ranking$perc_of_delayed_trains, 3)
+    stations_ranking$perc_of_delayed_trains <- ifelse(stations_ranking$perc_of_delayed_trains > 0, percent(stations_ranking$perc_of_delayed_trains), "0%")
+    stations_ranking$average_delay <- round(stations_ranking$average_delay, 0)
     segments_ranking$average_delay <- round(segments_ranking$average_delay, 0)
     
     # enhancing the station ranking data with the lat lon
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
     stations_ranking <- left_join(stations_ranking, corpus, by = "stanox")
-    stations_ranking <- fix_columns_format_for_display(stations_ranking)
     
     # enhancing the segment ranking data with the lat lon
     names(corpus)[names(corpus) == 'stanox'] <- 'from_stanox'
@@ -260,7 +249,6 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     segments_ranking <- left_join(segments_ranking, corpus, by = "to_stanox")
     names(segments_ranking)[names(segments_ranking) == 'LAT'] <- 'to_lat'
     names(segments_ranking)[names(segments_ranking) == 'LON'] <- 'to_lon'
-    # segments_ranking <- fix_columns_format_for_display(segments_ranking)
     
     # to support the segments colouring
     min_segment_delay <- min(segments_ranking$average_delay)
@@ -272,7 +260,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # drops and renames the columns to something more human
     stations_ranking <- stations_ranking[, names(stations_ranking) %in% c('Station.Name', 'no_of_trains', 'no_of_delayed_trains', 'perc_of_delayed_trains', 'average_delay', 'LAT', 'LON')]
     # TODO: renaming columns by assuming their position is bad!!!
-    names(stations_ranking) <- c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Average delay', 'LAT', 'LON', 'Station name')
+    names(stations_ranking) <- c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Average delay (min)', 'LAT', 'LON', 'Station name')
     
     # create the JSON
     json_structure <- list(
@@ -284,7 +272,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                     'properties' = do.call(c, list(
-                        rp[names(rp) %in% c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Average delay', 'Station name')],
+                        rp[names(rp) %in% c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'Average delay (min)', 'Station name')],
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     ))
