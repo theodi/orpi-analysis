@@ -240,6 +240,9 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     corpus <- corpus[!is.na(corpus$LAT) & !is.na(corpus$LON), ]
     stations_ranking <- stations_ranking[stations_ranking$stanox %in% corpus$STANOX, ]
     segments_ranking <- segments_ranking[(segments_ranking$from_stanox %in% corpus$STANOX) & (segments_ranking$to_stanox %in% corpus$STANOX), ]
+    
+    # do some roundings 
+    stations_ranking$perc_of_delayed_trains <- round(stations_ranking$perc_of_delayed_trains, 0)
         
     # enhancing the station ranking data with the lat lon
     # oddly, dplyr does not support different left and right names for joins
@@ -266,9 +269,9 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     exp_base <- (100 - min_opacity) ^ (1 / (max_segment_delay - min_segment_delay))
     
     # drops and renames the columns to something more human
-    stations_ranking <- stations_ranking[, names(stations_ranking) %in% c('Station.Name', 'no_of_trains', 'perc_of_delayed_trains', 'LAT', 'LON')]
+    stations_ranking <- stations_ranking[, names(stations_ranking) %in% c('Station.Name', 'no_of_trains', 'no_of_delayed_trains', 'perc_of_delayed_trains', 'LAT', 'LON')]
     # TODO: renaming columns by assuming their position is bad!!!
-    names(stations_ranking) <- c('No. of trains', 'Perc. of delayed trains', 'LAT', 'LON', 'Station name')
+    names(stations_ranking) <- c('No. of trains', 'No. of delayed trains', 'Perc. of delayed trains', 'LAT', 'LON', 'Station name')
     
     # create the JSON
     json_structure <- list(
