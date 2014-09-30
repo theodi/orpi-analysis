@@ -268,7 +268,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     # drops and renames the columns to something more human
     stations_ranking <- stations_ranking[, names(stations_ranking) %in% c('Station.Name', 'no_of_trains', 'perc_of_delayed_trains', 'LAT', 'LON')]
     # TODO: renaming columns by assuming their position is bad!!!
-    names(stations_ranking) <- c('No. of trains', '% of delayed trains', 'LAT', 'LON', 'Station name')
+    names(stations_ranking) <- c('No. of trains', 'Perc. of delayed trains', 'LAT', 'LON', 'Station name')
     
     # create the JSON
     json_structure <- list(
@@ -280,7 +280,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                     'type' = "Feature",
                     'geometry' = list(type = "Point", coordinates = c(rp$LON, rp$LAT)),
                     'properties' = do.call(c, list(
-                        rp[names(rp) %in% c('Station name', 'No. of trains', '% of delayed trains', 'LAT', 'LON')],
+                        rp[names(rp) %in% c('Station name', 'No. of trains', 'Perc. of delayed trains')],
                         "marker-size" = "large",
                         "marker-symbol" = "rail"
                     ))
