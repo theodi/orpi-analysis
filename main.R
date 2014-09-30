@@ -243,7 +243,8 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
     
     # do some roundings 
     stations_ranking$perc_of_delayed_trains <- round(stations_ranking$perc_of_delayed_trains, 0)
-        
+    segments_ranking$average_delay <- round(segments_ranking$average_delay, 0)
+    
     # enhancing the station ranking data with the lat lon
     # oddly, dplyr does not support different left and right names for joins
     names(corpus)[names(corpus) == 'STANOX'] <- 'stanox'
@@ -298,7 +299,7 @@ make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
                         # uncomment below if you want all stats calculated for
                         # segments to be part of the GeoJSON
                         # segment[!(names(segment) %in% c('from_stanox', 'to_stanox', 'from_lat', 'from_lon', 'to_lat', 'to_lon'))],
-                        "average_delay" = segment$average_delay, 
+                        "Average delay" = segment$average_delay, 
                         "stroke" = ifelse(segment$average_delay == 0, "#BEBEBE", "#FF0000"),
                         "stroke-opacity" = ifelse(segment$average_delay == 0, min_opacity, round((min_alpha + exp_base ^ (segment$average_delay - min_segment_delay)) / 100, 2)),
                         "stroke-width" = ifelse(segment$average_delay == 0, 2, 3)
