@@ -27,10 +27,9 @@ hist_pass <- read.csv("passenger-data/historic-passenger-journeys-DfT.csv")
 names(hist_pass) <- c("year", "year-ch", "journeys")
 # hist_pass$year <- as.Date(strptime(hist_pass$year, format = "%Y"))
 
-ggplot(hist_pass, aes(year, journeys)) + geom_point(shape = 15, color = odi_dBlue, size = 3) + geom_rangeframe(sides = "b") + 
-  ylim(0,2100) + ylab("Passenger journeys in million") + xlab("Year") + 
+ggplot(hist_pass, aes(year, journeys)) + geom_point(shape = 15, color = odi_orange, size = 3) + geom_rangeframe(sides = "b") + 
+  ylim(0, 2100) + ylab("Passenger journeys in million") + xlab("Year") +
   scale_x_continuous(breaks = c(1900, 1919, 1938, 1946, 1950, 1960, 1970, 1980, 1990, 2000, 2008, 2013)) +
-  theme(panel.grid.minor = element_blank(), panel.grid.major.x = element_blank(), panel.grid.major.y = element_line(colour = odi_dBlue, size = 0.5, linetype = 'dotted'), axis.ticks.y = element_blank())
+  theme(panel.grid.minor = element_blank(), panel.grid.major.x = element_blank(), panel.grid.major.y = element_line(colour = odi_orange, size = 0.5, linetype = 'dotted'), axis.ticks.y = element_blank())
 ggsave("graphics/historic-passenger-numbers.png", width = 16, height = 4)
-ggsave("graphics/historic-passenger-numbers.pdf", width = 16, height = 4)
 
