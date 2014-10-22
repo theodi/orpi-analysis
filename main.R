@@ -6,13 +6,18 @@ RIGHT_TIME <- 1
 MINIMUM_DELAY <- 5
 HEAVY_DELAY <- 30
 PASSENGERS_JOURNEYS_PER_DAY_UK_WIDE <- 4360000
-AVG_DELAYED_TRAINS_PER_DAY <- 2219
+# AVG_DELAYED_TRAINS_PER_DAY <- 2219
+# We use this to infer the total lost minutes because we don't have passenger numbers
+AVG_DELAYED_TRAINS_PER_DAY <- 2946
 
 source('./download-from-S3.R')
 source('./download-corpus.R')
 
 # let's see integer numerics as such!
 options(digits=12)
+
+# REMEMBER TO TURN BACK ON!
+# options(warn = -1)
 
 # Not all location data shows the arrival of trains at intermediate stations
 # in a journey, typically when the timetable sets identical arrival and 
@@ -174,8 +179,10 @@ calculate_day_rank <- function (date_from, date_to = NULL) {
 }
 
 calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
-    if (!is.null(date_to)) {
-        date_range <- sapply(seq(0, date_to - date_from), function (x) { as.Date(date_from + x) });
+  date_from <- as.Date(date_from)
+  if (!is.null(date_to)) {
+       date_to <- as.Date(date_to)
+        date_range <- sapply(seq(0, date_to - date_from), function (x) { as.Date(date_from + x) })
         return(do.call(rbind, lapply(date_range, function (d) calculate_day_rank(d))))
     } else {
         cat(paste0("Downloading data for ", date_from, "...\n"))
@@ -217,6 +224,9 @@ calculate_day_rank_memoised <- memoise(function (date_from, date_to) {
         ))
     }
 })
+
+
+
 
 make_geojson <- function (stations_ranking, segments_ranking, filename = NULL) {
 
