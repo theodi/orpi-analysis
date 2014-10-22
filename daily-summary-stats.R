@@ -11,7 +11,12 @@ source("multiplot-function.R")
 #------------------------------------------------
 
 # EXCLUDE FAILED days
-rail  <- all_days_ranking_13_aug_30_sep[!(all_days_ranking_13_aug_30_sep$date %in% c(as.Date("2014-08-15"), as.Date("2014-08-21"), as.Date("2014-09-16"))), ]
+rail  <- daily_stats_20_oct[!(daily_stats_20_oct$date %in% c(as.Date("2014-08-15"), 
+                                                             as.Date("2014-08-21"), 
+                                                             as.Date("2014-09-16"), 
+                                                             as.Date("2014-10-12"))), ]
+# Rename row numbers
+row.names(rail) <- NULL 
 
 sapply(rail, mean)
 
@@ -30,9 +35,9 @@ ggplot(rail, aes(x = date, y = no_of_trains, fill = factor(weekends))) +
 ggsave("graphics/trains-per-day.png", width = 16, height = 4)
 
 
-ggplot(rail, aes(x = date, y = total_lost_minutes / 1000, fill = factor(weekends))) + 
-  geom_bar(stat = "identity") + geom_hline(yintercept = seq(3000, 9000, 3000), col = "white") +
-  xlab("") + ylab("Gross lost minutes in thousands") + scale_y_continuous(labels = comma) +  
+ggplot(rail, aes(x = date, y = total_lost_minutes / 1000000, fill = factor(weekends))) + 
+  geom_bar(stat = "identity") + geom_hline(yintercept = seq(2.5, 15, 2.5), col = "white") +
+  xlab("") + ylab("Gross lost minutes in million") + scale_y_continuous(labels = comma) +  
   scale_fill_manual(values = c("1" = odi_red, "0" = odi_orange), guide = 'none') +
   scale_x_date(limits = c(first_date + 1, last_date - 1), breaks = "5 day",  labels = date_format("%d %b")) +
   theme(panel.grid.minor = element_blank(), panel.grid.major = element_blank())
@@ -49,9 +54,9 @@ ggsave("graphics/average-delay-per-day.png", width = 16, height = 4)
 # Short graphs for comparison
 
 
-p1 <- ggplot(rail, aes(x = date, y = total_lost_minutes / 1000, fill = factor(weekends))) + 
-  geom_bar(stat = "identity") + geom_hline(yintercept = seq(3000, 9000, 3000), col = "white") +
-  xlab("") + ylab("Gross lost minutes in thousands") + scale_y_continuous(labels = comma) +  
+p1 <- ggplot(rail, aes(x = date, y = total_lost_minutes / 1000000, fill = factor(weekends))) + 
+  geom_bar(stat = "identity") + geom_hline(yintercept = seq(2.5, 10, 2.5), col = "white") +
+  xlab("") + ylab("Gross lost minutes in million") + scale_y_continuous(labels = comma, limits = c(0, 10)) +  
   coord_cartesian(xlim = c(as.Date("2014-09-18") - 0.5, as.Date("2014-09-22") + 0.5)) + 
   scale_fill_manual(values = c("1" = odi_red, "0" = odi_orange), guide = 'none') +
   scale_x_date(breaks = "1 day", labels = date_format("%d %b")) +
@@ -73,10 +78,10 @@ dev.off()
 
 cor(rail$average_delay, rail$total_lost_minutes)
 
-ggplot(rail, aes(average_delay, total_lost_minutes / 1000, shape = factor(weekends))) + 
+ggplot(rail, aes(average_delay, total_lost_minutes / 1000000, shape = factor(weekends))) + 
   geom_point(colour = odi_turquoise, size = 5) + 
   xlab("Average delay in minutes") +
-  ylab("Gross lost minutes in thousands") + scale_y_continuous(labels = comma, limits = c(0, NA))  +
+  ylab("Gross lost minutes in million") + scale_y_continuous(labels = comma, limits = c(0, NA))  +
   scale_shape_manual(values = c("1" = 15, "0" = 19), guide = 'none') +
   theme(axis.text = element_text(size = 20), axis.title = element_text(size = 20))
 ggsave("graphics/correlation-delay-lost-min.png", width = 12, height = 8)
